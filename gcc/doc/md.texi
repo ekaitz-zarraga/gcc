@@ -2994,6 +2994,406 @@ A memory reference that is encoded within the opcode.
 
 @end table
 
+@item PowerPC and IBM RS6000---@file{config/rs6000/constraints.md}
+@table @code
+@item b
+Address base register
+
+@item d
+Floating point register (containing 64-bit value)
+
+@item f
+Floating point register (containing 32-bit value)
+
+@item v
+Altivec vector register
+
+@item wa
+Any VSX register if the @option{-mvsx} option was used or NO_REGS.
+
+When using any of the register constraints (@code{wa}, @code{wd},
+@code{wf}, @code{wg}, @code{wh}, @code{wi}, @code{wj}, @code{wk},
+@code{wl}, @code{wm}, @code{wo}, @code{wp}, @code{wq}, @code{ws},
+@code{wt}, @code{wu}, @code{wv}, @code{ww}, or @code{wy})
+that take VSX registers, you must use @code{%x<n>} in the template so
+that the correct register is used.  Otherwise the register number
+output in the assembly file will be incorrect if an Altivec register
+is an operand of a VSX instruction that expects VSX register
+numbering.
+
+@smallexample
+asm ("xvadddp %x0,%x1,%x2"
+     : "=wa" (v1)
+     : "wa" (v2), "wa" (v3));
+@end smallexample
+
+@noindent
+is correct, but:
+
+@smallexample
+asm ("xvadddp %0,%1,%2" 
+     : "=wa" (v1) 
+     : "wa" (v2), "wa" (v3));
+@end smallexample
+
+@noindent
+is not correct.
+
+If an instruction only takes Altivec registers, you do not want to use
+@code{%x<n>}.
+
+@smallexample
+asm ("xsaddqp %0,%1,%2"
+     : "=v" (v1)
+     : "v" (v2), "v" (v3));
+@end smallexample
+
+@noindent
+is correct because the @code{xsaddqp} instruction only takes Altivec
+registers, while:
+
+@smallexample
+asm ("xsaddqp %x0,%x1,%x2" 
+     : "=v" (v1) 
+     : "v" (v2), "v" (v3));
+@end smallexample
+
+@noindent
+is incorrect.
+
+@item wb
+Altivec register if @option{-mcpu=power9} is used or NO_REGS.
+
+@item wd
+VSX vector register to hold vector double data or NO_REGS.
+
+@item we
+VSX register if the @option{-mcpu=power9} and @option{-m64} options
+were used or NO_REGS.
+
+@item wf
+VSX vector register to hold vector float data or NO_REGS.
+
+@item wg
+If @option{-mmfpgpr} was used, a floating point register or NO_REGS.
+
+@item wh
+Floating point register if direct moves are available, or NO_REGS.
+
+@item wi
+FP or VSX register to hold 64-bit integers for VSX insns or NO_REGS.
+
+@item wj
+FP or VSX register to hold 64-bit integers for direct moves or NO_REGS.
+
+@item wk
+FP or VSX register to hold 64-bit doubles for direct moves or NO_REGS.
+
+@item wl
+Floating point register if the LFIWAX instruction is enabled or NO_REGS.
+
+@item wm
+VSX register if direct move instructions are enabled, or NO_REGS.
+
+@item wn
+No register (NO_REGS).
+
+@item wo
+VSX register to use for ISA 3.0 vector instructions, or NO_REGS.
+
+@item wp
+VSX register to use for IEEE 128-bit floating point TFmode, or NO_REGS.
+
+@item wq
+VSX register to use for IEEE 128-bit floating point, or NO_REGS.
+
+@item wr
+General purpose register if 64-bit instructions are enabled or NO_REGS.
+
+@item ws
+VSX vector register to hold scalar double values or NO_REGS.
+
+@item wt
+VSX vector register to hold 128 bit integer or NO_REGS.
+
+@item wu
+Altivec register to use for float/32-bit int loads/stores  or NO_REGS.
+
+@item wv
+Altivec register to use for double loads/stores  or NO_REGS.
+
+@item ww
+FP or VSX register to perform float operations under @option{-mvsx} or NO_REGS.
+
+@item wx
+Floating point register if the STFIWX instruction is enabled or NO_REGS.
+
+@item wy
+FP or VSX register to perform ISA 2.07 float ops or NO_REGS.
+
+@item wz
+Floating point register if the LFIWZX instruction is enabled or NO_REGS.
+
+@item wB
+Signed 5-bit constant integer that can be loaded into an altivec register.
+
+@item wD
+Int constant that is the element number of the 64-bit scalar in a vector.
+
+@item wE
+Vector constant that can be loaded with the XXSPLTIB instruction.
+
+@item wF
+Memory operand suitable for power9 fusion load/stores.
+
+@item wG
+Memory operand suitable for TOC fusion memory references.
+
+@item wH
+Altivec register if @option{-mvsx-small-integer}.
+
+@item wI
+Floating point register if @option{-mvsx-small-integer}.
+
+@item wJ
+FP register if @option{-mvsx-small-integer} and @option{-mpower9-vector}.
+
+@item wK
+Altivec register if @option{-mvsx-small-integer} and @option{-mpower9-vector}.
+
+@item wL
+Int constant that is the element number that the MFVSRLD instruction.
+targets.
+
+@item wM
+Match vector constant with all 1's if the XXLORC instruction is available.
+
+@item wO
+A memory operand suitable for the ISA 3.0 vector d-form instructions.
+
+@item wQ
+A memory address that will work with the @code{lq} and @code{stq}
+instructions.
+
+@item wS
+Vector constant that can be loaded with XXSPLTIB & sign extension.
+
+@item h
+@samp{MQ}, @samp{CTR}, or @samp{LINK} register
+
+@item c
+@samp{CTR} register
+
+@item l
+@samp{LINK} register
+
+@item x
+@samp{CR} register (condition register) number 0
+
+@item y
+@samp{CR} register (condition register)
+
+@item z
+@samp{XER[CA]} carry bit (part of the XER register)
+
+@item I
+Signed 16-bit constant
+
+@item J
+Unsigned 16-bit constant shifted left 16 bits (use @samp{L} instead for
+@code{SImode} constants)
+
+@item K
+Unsigned 16-bit constant
+
+@item L
+Signed 16-bit constant shifted left 16 bits
+
+@item M
+Constant larger than 31
+
+@item N
+Exact power of 2
+
+@item O
+Zero
+
+@item P
+Constant whose negation is a signed 16-bit constant
+
+@item G
+Floating point constant that can be loaded into a register with one
+instruction per word
+
+@item H
+Integer/Floating point constant that can be loaded into a register using
+three instructions
+
+@item m
+Memory operand.
+Normally, @code{m} does not allow addresses that update the base register.
+If @samp{<} or @samp{>} constraint is also used, they are allowed and
+therefore on PowerPC targets in that case it is only safe
+to use @samp{m<>} in an @code{asm} statement if that @code{asm} statement
+accesses the operand exactly once.  The @code{asm} statement must also
+use @samp{%U@var{<opno>}} as a placeholder for the ``update'' flag in the
+corresponding load or store instruction.  For example:
+
+@smallexample
+asm ("st%U0 %1,%0" : "=m<>" (mem) : "r" (val));
+@end smallexample
+
+is correct but:
+
+@smallexample
+asm ("st %1,%0" : "=m<>" (mem) : "r" (val));
+@end smallexample
+
+is not.
+
+@item es
+A ``stable'' memory operand; that is, one which does not include any
+automodification of the base register.  This used to be useful when
+@samp{m} allowed automodification of the base register, but as those are now only
+allowed when @samp{<} or @samp{>} is used, @samp{es} is basically the same
+as @samp{m} without @samp{<} and @samp{>}.
+
+@item Q
+Memory operand that is an offset from a register (it is usually better
+to use @samp{m} or @samp{es} in @code{asm} statements)
+
+@item Z
+Memory operand that is an indexed or indirect from a register (it is
+usually better to use @samp{m} or @samp{es} in @code{asm} statements)
+
+@item R
+AIX TOC entry
+
+@item a
+Address operand that is an indexed or indirect from a register (@samp{p} is
+preferable for @code{asm} statements)
+
+@item U
+System V Release 4 small data area reference
+
+@item W
+Vector constant that does not require memory
+
+@item j
+Vector constant that is all zeros.
+
+@end table
+
+@item RL78---@file{config/rl78/constraints.md}
+@table @code
+
+@item Int3
+An integer constant in the range 1 @dots{} 7.
+@item Int8
+An integer constant in the range 0 @dots{} 255.
+@item J
+An integer constant in the range @minus{}255 @dots{} 0
+@item K
+The integer constant 1.
+@item L
+The integer constant -1.
+@item M
+The integer constant 0.
+@item N
+The integer constant 2.
+@item O
+The integer constant -2.
+@item P
+An integer constant in the range 1 @dots{} 15.
+@item Qbi
+The built-in compare types--eq, ne, gtu, ltu, geu, and leu.
+@item Qsc
+The synthetic compare types--gt, lt, ge, and le.
+@item Wab
+A memory reference with an absolute address.
+@item Wbc
+A memory reference using @code{BC} as a base register, with an optional offset.
+@item Wca
+A memory reference using @code{AX}, @code{BC}, @code{DE}, or @code{HL} for the address, for calls.
+@item Wcv
+A memory reference using any 16-bit register pair for the address, for calls.
+@item Wd2
+A memory reference using @code{DE} as a base register, with an optional offset.
+@item Wde
+A memory reference using @code{DE} as a base register, without any offset.
+@item Wfr
+Any memory reference to an address in the far address space.
+@item Wh1
+A memory reference using @code{HL} as a base register, with an optional one-byte offset.
+@item Whb
+A memory reference using @code{HL} as a base register, with @code{B} or @code{C} as the index register.
+@item Whl
+A memory reference using @code{HL} as a base register, without any offset.
+@item Ws1
+A memory reference using @code{SP} as a base register, with an optional one-byte offset.
+@item Y
+Any memory reference to an address in the near address space.
+@item A
+The @code{AX} register.
+@item B
+The @code{BC} register.
+@item D
+The @code{DE} register.
+@item R
+@code{A} through @code{L} registers.
+@item S
+The @code{SP} register.
+@item T
+The @code{HL} register.
+@item Z08W
+The 16-bit @code{R8} register.
+@item Z10W
+The 16-bit @code{R10} register.
+@item Zint
+The registers reserved for interrupts (@code{R24} to @code{R31}).
+@item a
+The @code{A} register.
+@item b
+The @code{B} register.
+@item c
+The @code{C} register.
+@item d
+The @code{D} register.
+@item e
+The @code{E} register.
+@item h
+The @code{H} register.
+@item l
+The @code{L} register.
+@item v
+The virtual registers.
+@item w
+The @code{PSW} register.
+@item x
+The @code{X} register.
+
+@end table
+
+@item RISC-V---@file{config/riscv/constraints.md}
+@table @code
+
+@item f
+A floating-point register (if availiable).
+
+@item I
+An I-type 12-bit signed immediate.
+
+@item J
+Integer zero.
+
+@item K
+A 5-bit unsigned immediate for CSR access instructions.
+
+@item A
+An address that is held in a general-purpose register.
+
+@end table
+
 @item RX---@file{config/rx/constraints.md}
 @table @code
 @item Q
