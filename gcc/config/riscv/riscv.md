@@ -300,15 +300,6 @@
 ;; the controlling mode.
 (define_mode_attr HALFMODE [(DF "SI") (DI "SI") (TF "DI")])
 
-;; Iterator and attributes for floating-point rounding instructions.
-(define_int_iterator RINT [UNSPEC_LRINT UNSPEC_LROUND])
-(define_int_attr rint_pattern [(UNSPEC_LRINT "rint") (UNSPEC_LROUND "round")])
-(define_int_attr rint_rm [(UNSPEC_LRINT "dyn") (UNSPEC_LROUND "rmm")])
-
-;; Iterator and attributes for quiet comparisons.
-(define_int_iterator QUIET_COMPARISON [UNSPEC_FLT_QUIET UNSPEC_FLE_QUIET])
-(define_int_attr quiet_pattern [(UNSPEC_FLT_QUIET "lt") (UNSPEC_FLE_QUIET "le")])
-
 ;; This code iterator allows signed and unsigned widening multiplications
 ;; to use the same template.
 (define_code_iterator any_extend [sign_extend zero_extend])
@@ -1110,15 +1101,23 @@
   [(set_attr "type" "fcvt")
    (set_attr "mode" "<ANYF:MODE>")])
 
-(define_insn "l<rint_pattern><ANYF:mode><GPR:mode>2"
+(define_insn "lrint<ANYF:mode><GPR:mode>2"
   [(set (match_operand:GPR 0 "register_operand" "=r")
 	(unspec:GPR [(match_operand:ANYF 1 "register_operand" "f")]
-		    RINT))]
+		    UNSPEC_LRINT))]
   "TARGET_HARD_FLOAT"
-  "fcvt.<GPR:ifmt>.<ANYF:fmt> %0,%1,<rint_rm>"
+  "fcvt.<GPR:ifmt>.<ANYF:fmt> %0,%1,dyn"
   [(set_attr "type" "fcvt")
    (set_attr "mode" "<ANYF:MODE>")])
 
+(define_insn "lround<ANYF:mode><GPR:mode>2"
+  [(set (match_operand:GPR 0 "register_operand" "=r")
+	(unspec:GPR [(match_operand:ANYF 1 "register_operand" "f")]
+		    UNSPEC_LROUND))]
+  "TARGET_HARD_FLOAT"
+  "fcvt.<GPR:ifmt>.<ANYF:fmt> %0,%1,rmm"
+  [(set_attr "type" "fcvt")
+   (set_attr "mode" "<ANYF:MODE>")])
 ;;
 ;;  ....................
 ;;
@@ -1661,15 +1660,28 @@
   [(set_attr "type" "fcmp")
    (set_attr "mode" "<UNITMODE>")])
 
-(define_insn "f<quiet_pattern>_quiet<ANYF:mode><X:mode>4"
+(define_insn "fle_quiet<ANYF:mode><X:mode>4"
    [(set (match_operand:X 0 "register_operand" "=r")
 	 (unspec:X
 	    [(match_operand:ANYF 1 "register_operand" "f")
 	     (match_operand:ANYF 2 "register_operand" "f")]
-	    QUIET_COMPARISON))
+	    UNSPEC_FLE_QUIET))
     (clobber (match_scratch:X 3 "=&r"))]
   "TARGET_HARD_FLOAT"
-  "frflags\t%3\n\tf<quiet_pattern>.<fmt>\t%0,%1,%2\n\tfsflags %3"
+  "frflags\t%3\n\tfle.<fmt>\t%0,%1,%2\n\tfsflags %3"
+  [(set_attr "type" "fcmp")
+   (set_attr "mode" "<UNITMODE>")
+   (set (attr "length") (const_int 12))])
+
+(define_insn "flt_quiet<ANYF:mode><X:mode>4"
+   [(set (match_operand:X 0 "register_operand" "=r")
+	 (unspec:X
+	    [(match_operand:ANYF 1 "register_operand" "f")
+	     (match_operand:ANYF 2 "register_operand" "f")]
+	    UNSPEC_FLT_QUIET))
+    (clobber (match_scratch:X 3 "=&r"))]
+  "TARGET_HARD_FLOAT"
+  "frflags\t%3\n\tflt.<fmt>\t%0,%1,%2\n\tfsflags %3"
   [(set_attr "type" "fcmp")
    (set_attr "mode" "<UNITMODE>")
    (set (attr "length") (const_int 12))])
@@ -1839,12 +1851,12 @@
 ;; allows jump optimizations to work better.
 
 (define_expand "return"
-  [(simple_return)]
+  [(return)]
   "riscv_can_use_return_insn ()"
   "")
 
 (define_insn "simple_return"
-  [(simple_return)]
+  [(return)]
   ""
   "ret"
   [(set_attr "type"	"jump")
@@ -1853,7 +1865,7 @@
 ;; Normal return.
 
 (define_insn "simple_return_internal"
-  [(simple_return)
+  [(return)
    (use (match_operand 0 "pmode_register_operand" ""))]
   ""
   "jr\t%0"
