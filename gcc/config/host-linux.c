@@ -22,6 +22,13 @@
 #include "coretypes.h"
 #include "hosthooks.h"
 #include "hosthooks-def.h"
+ 
+// ../.././gcc/config/host-linux.c:213: `SSIZE_MAX' undeclared (first
+// use in this function)
+#include <limits.h>
+#ifndef	SSIZE_MAX
+# define SSIZE_MAX	LONG_MAX
+#endif
 
 
 /* Linux has a feature called exec-shield-randomize that perturbs the
