@@ -257,4 +257,44 @@ least_common_multiple (int a, int b)
   return (abs (a) * abs (b) / gcd (a, b));
 }
 
+
+/* Like ctz_hwi, except 0 when x == 0.  */
+
+static inline int
+ctz_or_zero (unsigned HOST_WIDE_INT x)
+{
+  return ffs_hwi (x) - 1;
+}
+
+/* Sign extend SRC starting from PREC.  */
+
+static inline HOST_WIDE_INT
+sext_hwi (HOST_WIDE_INT src, unsigned int prec)
+{
+  if (prec == HOST_BITS_PER_WIDE_INT)
+    return src;
+  else
+#if defined (__GNUC__)
+    {
+      /* Take the faster path if the implementation-defined bits it's relying
+	 on are implemented the way we expect them to be.  Namely, conversion
+	 from unsigned to signed preserves bit pattern, and right shift of
+	 a signed value propagates the sign bit.
+	 We have to convert from signed to unsigned and back, because when left
+	 shifting signed values, any overflow is undefined behavior.  */
+      ((void)(0 && (prec < HOST_BITS_PER_WIDE_INT))); // Assertion
+      int shift = HOST_BITS_PER_WIDE_INT - prec;
+      return ((HOST_WIDE_INT) ((unsigned HOST_WIDE_INT) src << shift)) >> shift;
+    }
+#else
+    {
+      /* Fall back to the slower, well defined path otherwise.  */
+      ((void)(0 && (prec < HOST_BITS_PER_WIDE_INT))); // Assertion
+      HOST_WIDE_INT sign_mask = HOST_WIDE_INT_1 << (prec - 1);
+      HOST_WIDE_INT value_mask = (HOST_WIDE_INT_1U << prec) - HOST_WIDE_INT_1U;
+      return (((src & value_mask) ^ sign_mask) - sign_mask);
+    }
+#endif
+}
+
 #endif /* ! GCC_HWINT_H */

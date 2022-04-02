@@ -25,7 +25,66 @@ along with GCC; see the file COPYING3.  If not see
 #include "config/riscv/riscv-opts.h"
 
 /* Target CPU builtins.  */
-#define TARGET_CPU_CPP_BUILTINS() riscv_cpu_cpp_builtins (pfile)
+#define TARGET_CPU_CPP_BUILTINS() 						\
+do {										\
+  builtin_define ("__riscv");							\
+  										\
+  if (TARGET_RVC)								\
+    builtin_define ("__riscv_compressed");					\
+  										\
+  if (TARGET_ATOMIC)								\
+    builtin_define ("__riscv_atomic");						\
+  										\
+  if (TARGET_MUL)								\
+    builtin_define ("__riscv_mul");						\
+  if (TARGET_DIV)								\
+    builtin_define ("__riscv_div");						\
+  if (TARGET_DIV && TARGET_MUL)							\
+    builtin_define ("__riscv_muldiv");						\
+  										\
+  builtin_define_with_int_value ("__riscv_xlen", UNITS_PER_WORD * 8);		\
+  if (TARGET_HARD_FLOAT)							\
+    builtin_define_with_int_value ("__riscv_flen", UNITS_PER_FP_REG * 8);	\
+  										\
+  if (TARGET_HARD_FLOAT && TARGET_FDIV)						\
+    {										\
+      builtin_define ("__riscv_fdiv");						\
+      builtin_define ("__riscv_fsqrt");						\
+    }										\
+  										\
+  switch (riscv_abi)								\
+    {										\
+    case ABI_ILP32:								\
+    case ABI_LP64:								\
+      builtin_define ("__riscv_float_abi_soft");				\
+      break;									\
+  										\
+    case ABI_ILP32F:								\
+    case ABI_LP64F:								\
+      builtin_define ("__riscv_float_abi_single");				\
+      break;									\
+  										\
+    case ABI_ILP32D:								\
+    case ABI_LP64D:								\
+      builtin_define ("__riscv_float_abi_double");				\
+      break;									\
+    }										\
+  										\
+  switch (riscv_cmodel)								\
+    {										\
+    case CM_MEDLOW:								\
+      builtin_define ("__riscv_cmodel_medlow");					\
+      break;									\
+  										\
+    case CM_MEDANY:								\
+      builtin_define ("__riscv_cmodel_medany");					\
+      break;									\
+  										\
+    case CM_PIC:								\
+      builtin_define ("__riscv_cmodel_pic");					\
+      break;									\
+    }										\
+} while (0);
 
 /* Default target_flags if no switches are specified  */
 
@@ -55,7 +114,7 @@ along with GCC; see the file COPYING3.  If not see
 #undef ASM_SPEC
 #define ASM_SPEC "\
 %(subtarget_asm_debugging_spec) \
-%{" FPIE_OR_FPIC_SPEC ":-fpic} \
+%{fpic|fPIC|fpie|fPIE:-k}\
 %{march=*} \
 %{mabi=*} \
 %(subtarget_asm_spec)"
@@ -902,5 +961,9 @@ extern bool riscv_hard_regno_mode_ok[][FIRST_PSEUDO_REGISTER];
 #define IMM_REACH (1LL << IMM_BITS)
 #define CONST_HIGH_PART(VALUE) (((VALUE) + (IMM_REACH/2)) & ~(IMM_REACH-1))
 #define CONST_LOW_PART(VALUE) ((VALUE) - CONST_HIGH_PART (VALUE))
+
+#define SYMBOL_REF_P(RTX) (GET_CODE (RTX) == SYMBOL_REF)
+#define CLASS_MAX_NREGS(CLASS, MODE) riscv_class_max_nregs (CLASS, MODE)
+#define LEGITIMATE_CONSTANT_P(X) (riscv_const_insns (X) > 0)
 
 #endif /* ! GCC_RISCV_H */

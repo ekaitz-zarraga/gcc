@@ -43,7 +43,7 @@ extern bool riscv_hard_regno_mode_ok_p (unsigned int, enum machine_mode);
 extern int riscv_address_insns (rtx, enum machine_mode, bool);
 extern int riscv_const_insns (rtx);
 extern int riscv_split_const_insns (rtx);
-extern int riscv_load_store_insns (rtx, rtx_insn *);
+extern int riscv_load_store_insns (rtx, rtx);
 extern rtx riscv_emit_move (rtx, rtx);
 extern bool riscv_split_symbol (rtx, rtx, enum machine_mode, rtx *);
 extern bool riscv_split_symbol_type (enum riscv_symbol_type);
@@ -70,14 +70,15 @@ extern void riscv_expand_epilogue (bool);
 extern bool riscv_can_use_return_insn (void);
 extern rtx riscv_function_value (const_tree, const_tree, enum machine_mode);
 extern unsigned int riscv_hard_regno_nregs (int, enum machine_mode);
+extern unsigned char riscv_class_max_nregs (reg_class_t, enum machine_mode);
 
 /* Routines implemented in riscv-c.c.  */
-void riscv_cpu_cpp_builtins (cpp_reader *);
+void riscv_cpu_cpp_builtins (struct cpp_reader *);
 
 /* Routines implemented in riscv-builtins.c.  */
-extern void riscv_atomic_assign_expand_fenv (tree *, tree *, tree *);
-extern rtx riscv_expand_builtin (tree, rtx, rtx, enum machine_mode, int);
-extern tree riscv_builtin_decl (unsigned int, bool);
-extern void riscv_init_builtins (void);
+// extern void riscv_atomic_assign_expand_fenv (tree *, tree *, tree *);
+// extern rtx riscv_expand_builtin (tree, rtx, rtx, enum machine_mode, int);
+// extern tree riscv_builtin_decl (unsigned int, bool);
+// extern void riscv_init_builtins (void);
 
 #endif /* ! GCC_RISCV_PROTOS_H */

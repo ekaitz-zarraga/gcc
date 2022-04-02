@@ -19,10 +19,10 @@ along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
 #include "config.h"
+#include "c-family/c-common.h"
 #include "system.h"
 #include "coretypes.h"
 #include "tm.h"
-#include "c-family/c-common.h"
 #include "cpplib.h"
 
 #define builtin_define(TXT) cpp_define (pfile, TXT)
@@ -30,7 +30,7 @@ along with GCC; see the file COPYING3.  If not see
 /* Implement TARGET_CPU_CPP_BUILTINS.  */
 
 void
-riscv_cpu_cpp_builtins (cpp_reader *pfile)
+riscv_cpu_cpp_builtins (struct cpp_reader *pfile)
 {
   builtin_define ("__riscv");
   

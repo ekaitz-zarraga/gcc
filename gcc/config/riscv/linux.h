@@ -17,10 +17,7 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
-#define TARGET_OS_CPP_BUILTINS()				\
-  do {								\
-    GNU_USER_TARGET_OS_CPP_BUILTINS();				\
-  } while (0)
+#define TARGET_OS_CPP_BUILTINS()  LINUX_TARGET_OS_CPP_BUILTINS()
 
 #define GLIBC_DYNAMIC_LINKER "/lib/ld-linux-riscv" XLEN_SPEC "-" ABI_SPEC ".so.1"
 
@@ -40,5 +37,5 @@ along with GCC; see the file COPYING3.  If not see
   %{!shared: \
     %{!static: \
       %{rdynamic:-export-dynamic} \
-      -dynamic-linker " GNU_USER_DYNAMIC_LINKER "} \
+      -dynamic-linker " LINUX_DYNAMIC_LINKER "} \
     %{static:-static}}"

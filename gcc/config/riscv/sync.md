@@ -37,12 +37,9 @@
   [(match_operand:SI 0 "const_int_operand" "")] ;; model
   ""
 {
-  if (INTVAL (operands[0]) != MEMMODEL_RELAXED)
-    {
-      rtx mem = gen_rtx_MEM (BLKmode, gen_rtx_SCRATCH (Pmode));
-      MEM_VOLATILE_P (mem) = 1;
-      emit_insn (gen_mem_thread_fence_1 (mem, operands[0]));
-    }
+  rtx mem = gen_rtx_MEM (BLKmode, gen_rtx_SCRATCH (Pmode));
+  MEM_VOLATILE_P (mem) = 1;
+  emit_insn (gen_mem_thread_fence_1 (mem, operands[0]));
   DONE;
 })
 
@@ -138,17 +135,17 @@
     {
       rtx difference = gen_rtx_MINUS (<MODE>mode, operands[1], operands[3]);
       compare = gen_reg_rtx (<MODE>mode);
-      emit_insn (gen_rtx_SET (compare, difference));
+      emit_insn (gen_rtx_SET (VOIDmode, compare, difference));
     }
 
   if (word_mode != <MODE>mode)
     {
       rtx reg = gen_reg_rtx (word_mode);
-      emit_insn (gen_rtx_SET (reg, gen_rtx_SIGN_EXTEND (word_mode, compare)));
+      emit_insn (gen_rtx_SET (VOIDmode, reg, gen_rtx_SIGN_EXTEND (word_mode, compare)));
       compare = reg;
     }
 
-  emit_insn (gen_rtx_SET (operands[0], gen_rtx_EQ (SImode, compare, const0_rtx)));
+  emit_insn (gen_rtx_SET (VOIDmode, operands[0], gen_rtx_EQ (SImode, compare, const0_rtx)));
   DONE;
 })
 

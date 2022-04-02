@@ -31,79 +31,29 @@ along with GCC; see the file COPYING3.  If not see
 #include "insn-attr.h"
 #include "recog.h"
 #include "output.h"
-#include "hash-set.h"
-#include "machmode.h"
-#include "vec.h"
-#include "double-int.h"
-#include "input.h"
-#include "alias.h"
-#include "symtab.h"
-#include "wide-int.h"
-#include "inchash.h"
 #include "tree.h"
-#include "fold-const.h"
-#include "varasm.h"
-#include "stringpool.h"
-#include "stor-layout.h"
-#include "calls.h"
 #include "function.h"
-#include "hashtab.h"
-#include "flags.h"
-#include "statistics.h"
-#include "real.h"
-#include "fixed-value.h"
-#include "expmed.h"
-#include "dojump.h"
-#include "explow.h"
-#include "memmodel.h"
-#include "emit-rtl.h"
-#include "stmt.h"
 #include "expr.h"
-#include "insn-codes.h"
 #include "optabs.h"
 #include "libfuncs.h"
+#include "flags.h"
 #include "reload.h"
 #include "tm_p.h"
 #include "ggc.h"
 #include "gstab.h"
-#include "hash-table.h"
+#include "hashtab.h"
 #include "debug.h"
 #include "target.h"
 #include "target-def.h"
-#include "common/common-target.h"
+#include "integrate.h"
 #include "langhooks.h"
-#include "dominance.h"
-#include "cfg.h"
-#include "cfgrtl.h"
-#include "cfganal.h"
-#include "lcm.h"
-#include "cfgbuild.h"
-#include "cfgcleanup.h"
-#include "predict.h"
-#include "basic-block.h"
-#include "bitmap.h"
-#include "regset.h"
-#include "df.h"
+#include "cfglayout.h"
 #include "sched-int.h"
-#include "tree-ssa-alias.h"
-#include "internal-fn.h"
-#include "gimple-fold.h"
-#include "tree-eh.h"
-#include "gimple-expr.h"
-#include "is-a.h"
 #include "gimple.h"
-#include "gimplify.h"
+#include "bitmap.h"
 #include "diagnostic.h"
 #include "target-globals.h"
-#include "opts.h"
-#include "tree-pass.h"
-#include "context.h"
-#include "hash-map.h"
-#include "plugin-api.h"
-#include "ipa-ref.h"
-#include "cgraph.h"
-#include "builtins.h"
-#include "rtl-iter.h"
+
 
 /* True if X is an UNSPEC wrapper around a SYMBOL_REF or LABEL_REF.  */
 #define UNSPEC_ADDRESS_P(X)					\
@@ -502,8 +452,13 @@ riscv_tls_symbol_p (const_rtx x)
   return SYMBOL_REF_P (x) && SYMBOL_REF_TLS_MODEL (x) != 0;
 }
 
-/* Return true if symbol X binds locally.  */
+static int
+riscv_tls_symbol_ref_1 (rtx *x, void *data ATTRIBUTE_UNUSED)
+{
+  return riscv_tls_symbol_p (*x);
+}
 
+/* Return true if symbol X binds locally.  */
 static bool
 riscv_symbol_binds_local_p (const_rtx x)
 {
@@ -606,7 +561,7 @@ riscv_legitimate_constant_p (enum machine_mode mode ATTRIBUTE_UNUSED, rtx x)
 /* Implement TARGET_CANNOT_FORCE_CONST_MEM.  */
 
 static bool
-riscv_cannot_force_const_mem (enum machine_mode mode ATTRIBUTE_UNUSED, rtx x)
+riscv_cannot_force_const_mem (rtx x)
 {
   enum riscv_symbol_type type;
   rtx base, offset;
@@ -630,7 +585,7 @@ riscv_cannot_force_const_mem (enum machine_mode mode ATTRIBUTE_UNUSED, rtx x)
     }
 
   /* TLS symbols must be computed by riscv_legitimize_move.  */
-  if (tls_referenced_p (x))
+  if (for_each_rtx (&x, &riscv_tls_symbol_ref_1, NULL))
     return true;
 
   return false;
@@ -893,7 +848,7 @@ riscv_split_const_insns (rtx x)
    given that it loads from or stores to MEM. */
 
 int
-riscv_load_store_insns (rtx mem, rtx_insn *insn)
+riscv_load_store_insns (rtx mem, rtx insn)
 {
   enum machine_mode mode;
   bool might_split_p;
@@ -935,7 +890,7 @@ riscv_emit_move (rtx dest, rtx src)
 static rtx
 riscv_emit_set (rtx target, rtx src)
 {
-  emit_insn (gen_rtx_SET (target, src));
+  emit_insn (gen_rtx_SET (VOIDmode, target, src));
   return target;
 }
 
@@ -1007,7 +962,7 @@ riscv_strip_unspec_address (rtx op)
 
   split_const (op, &base, &offset);
   if (UNSPEC_ADDRESS_P (base))
-    op = plus_constant (Pmode, UNSPEC_ADDRESS (base), INTVAL (offset));
+    op = plus_constant (UNSPEC_ADDRESS (base), INTVAL (offset));
   return op;
 }
 
@@ -1142,7 +1097,7 @@ riscv_add_offset (rtx temp, rtx reg, HOST_WIDE_INT offset)
       high = riscv_force_temporary (temp, high);
       reg = riscv_force_temporary (temp, gen_rtx_PLUS (Pmode, high, reg));
     }
-  return plus_constant (Pmode, reg, offset);
+  return plus_constant (reg, offset);
 }
 
 /* The __tls_get_attr symbol.  */
@@ -1153,11 +1108,11 @@ static GTY(()) rtx riscv_tls_symbol;
    (either global dynamic or local dynamic).  RESULT is an RTX for the
    return value location.  */
 
-static rtx_insn *
+static rtx
 riscv_call_tls_get_addr (rtx sym, rtx result)
 {
   rtx a0 = gen_rtx_REG (Pmode, GP_ARG_FIRST), func;
-  rtx_insn *insn;
+  rtx insn;
 
   if (!riscv_tls_symbol)
     riscv_tls_symbol = init_one_libfunc ("__tls_get_addr");
@@ -1339,7 +1294,7 @@ riscv_legitimize_const_move (enum machine_mode mode, rtx dest, rtx src)
      usually produces better code.  */
   split_const (src, &base, &offset);
   if (offset != const0_rtx
-      && (targetm.cannot_force_const_mem (mode, src) || can_create_pseudo_p ()))
+      && (targetm.cannot_force_const_mem (src) || can_create_pseudo_p ()))
     {
       base = riscv_force_temporary (dest, base);
       riscv_emit_move (dest, riscv_add_offset (NULL, base, INTVAL (offset)));
@@ -1456,8 +1411,7 @@ riscv_extend_cost (rtx op, bool unsigned_p)
 /* Implement TARGET_RTX_COSTS.  */
 
 static bool
-riscv_rtx_costs (rtx x, machine_mode mode, int outer_code, int opno ATTRIBUTE_UNUSED,
-		 int *total, bool speed)
+riscv_rtx_costs (rtx x, enum machine_mode mode, int outer_code, int *total, bool speed)
 {
   bool float_mode_p = FLOAT_MODE_P (mode);
   int cost;
@@ -1526,7 +1480,7 @@ riscv_rtx_costs (rtx x, machine_mode mode, int outer_code, int opno ATTRIBUTE_UN
       return false;
 
     case LO_SUM:
-      *total = set_src_cost (XEXP (x, 0), mode, speed);
+      *total = rtx_cost (XEXP (x, 0), SET, speed);
       return true;
 
     case LT:
@@ -1585,9 +1539,9 @@ riscv_rtx_costs (rtx x, machine_mode mode, int outer_code, int opno ATTRIBUTE_UN
 	if (GET_CODE (op) == FMA && !HONOR_SIGNED_ZEROS (mode))
 	  {
 	    *total = (tune_info->fp_mul[mode == DFmode]
-		      + set_src_cost (XEXP (op, 0), mode, speed)
-		      + set_src_cost (XEXP (op, 1), mode, speed)
-		      + set_src_cost (XEXP (op, 2), mode, speed));
+		      + rtx_cost (XEXP (op, 0), SET, speed)
+		      + rtx_cost (XEXP (op, 1), SET, speed)
+		      + rtx_cost (XEXP (op, 2), SET, speed));
 	    return true;
 	  }
       }
@@ -1642,9 +1596,9 @@ riscv_rtx_costs (rtx x, machine_mode mode, int outer_code, int opno ATTRIBUTE_UN
 
     case FMA:
       *total = (tune_info->fp_mul[mode == DFmode]
-		+ set_src_cost (XEXP (x, 0), mode, speed)
-		+ set_src_cost (XEXP (x, 1), mode, speed)
-		+ set_src_cost (XEXP (x, 2), mode, speed));
+		+ rtx_cost (XEXP (x, 0), SET, speed)
+		+ rtx_cost (XEXP (x, 1), SET, speed)
+		+ rtx_cost (XEXP (x, 2), SET, speed));
       return true;
 
     case UNSPEC:
@@ -1664,11 +1618,9 @@ riscv_rtx_costs (rtx x, machine_mode mode, int outer_code, int opno ATTRIBUTE_UN
 /* Implement TARGET_ADDRESS_COST.  */
 
 static int
-riscv_address_cost (rtx addr, enum machine_mode mode,
-		    addr_space_t as ATTRIBUTE_UNUSED,
-		    bool speed ATTRIBUTE_UNUSED)
+riscv_address_cost (rtx addr, bool speed ATTRIBUTE_UNUSED)
 {
-  return riscv_address_insns (addr, mode, false);
+  return riscv_address_insns (addr, SImode, false);
 }
 
 /* Return one word of double-word value OP.  HIGH_P is true to select the
@@ -1957,7 +1909,7 @@ riscv_zero_if_equal (rtx cmp0, rtx cmp1)
 /* Sign- or zero-extend OP0 and OP1 for integer comparisons.  */
 
 static void
-riscv_extend_comparands (rtx_code code, rtx *op0, rtx *op1)
+riscv_extend_comparands (enum rtx_code code, rtx *op0, rtx *op1)
 {
   /* Comparisons consider all XLEN bits, so extend sub-XLEN values.  */
   if (GET_MODE_SIZE (word_mode) > GET_MODE_SIZE (GET_MODE (*op0)))
@@ -2040,7 +1992,7 @@ riscv_emit_int_compare (enum rtx_code *code, rtx *op0, rtx *op1)
 static void
 riscv_emit_float_compare (enum rtx_code *code, rtx *op0, rtx *op1)
 {
-  rtx tmp0, tmp1, cmp_op0 = *op0, cmp_op1 = *op1;
+  rtx tmp0, tmp1, tmp2, cmp_op0 = *op0, cmp_op1 = *op1;
   enum rtx_code fp_code = *code;
   *code = NE;
 
@@ -2086,13 +2038,17 @@ riscv_emit_float_compare (enum rtx_code *code, rtx *op0, rtx *op1)
       break;
 
     case UNLT:
-      std::swap (cmp_op0, cmp_op1);
+      tmp2 = cmp_op0;
+      cmp_op0 = cmp_op1;
+      cmp_op1 = tmp2;
       /* Fall through.  */
 
     UNORDERED_COMPARISON(UNGT, le)
 
     case UNLE:
-      std::swap (cmp_op0, cmp_op1);
+      tmp2 = cmp_op0;
+      cmp_op0 = cmp_op1;
+      cmp_op1 = tmp2;
       /* Fall through.  */
 
     UNORDERED_COMPARISON(UNGE, lt)
@@ -2149,7 +2105,7 @@ riscv_expand_float_scc (rtx target, enum rtx_code code, rtx op0, rtx op1)
 /* Jump to LABEL if (CODE OP0 OP1) holds.  */
 
 void
-riscv_expand_conditional_branch (rtx label, rtx_code code, rtx op0, rtx op1)
+riscv_expand_conditional_branch (rtx label, enum rtx_code code, rtx op0, rtx op1)
 {
   if (FLOAT_MODE_P (GET_MODE (op1)))
     riscv_emit_float_compare (&code, &op0, &op1);
@@ -2215,7 +2171,7 @@ riscv_flatten_aggregate_field (const_tree type,
      /* Can't handle incomplete types nor sizes that are not fixed.  */
      if (!COMPLETE_TYPE_P (type)
 	 || TREE_CODE (TYPE_SIZE (type)) != INTEGER_CST
-	 || !tree_fits_uhwi_p (TYPE_SIZE (type)))
+	 || !host_integerp (TYPE_SIZE (type), 0))
        return -1;
 
       for (tree f = TYPE_FIELDS (type); f; f = DECL_CHAIN (f))
@@ -2246,14 +2202,14 @@ riscv_flatten_aggregate_field (const_tree type,
 	    || TREE_CODE (TYPE_SIZE (type)) != INTEGER_CST
 	    || !index
 	    || !TYPE_MAX_VALUE (index)
-	    || !tree_fits_uhwi_p (TYPE_MAX_VALUE (index))
+	    || !host_integerp(TYPE_MAX_VALUE (index),0)
 	    || !TYPE_MIN_VALUE (index)
-	    || !tree_fits_uhwi_p (TYPE_MIN_VALUE (index))
-	    || !tree_fits_uhwi_p (elt_size))
+	    || !host_integerp(TYPE_MIN_VALUE (index),0)
+	    || !host_integerp(elt_size,0))
 	  return -1;
 
-	n_elts = 1 + tree_to_uhwi (TYPE_MAX_VALUE (index))
-		   - tree_to_uhwi (TYPE_MIN_VALUE (index));
+	n_elts = 1 + TREE_INT_CST_LOW(TYPE_MAX_VALUE (index))
+		   - TREE_INT_CST_LOW (TYPE_MIN_VALUE (index));
 	gcc_assert (n_elts >= 0);
 
 	for (HOST_WIDE_INT i = 0; i < n_elts; i++)
@@ -2263,7 +2219,7 @@ riscv_flatten_aggregate_field (const_tree type,
 		return -1;
 
 	      fields[n] = subfields[j];
-	      fields[n++].offset += i * tree_to_uhwi (elt_size);
+	      fields[n++].offset += i * TREE_INT_CST_LOW (elt_size);
 	    }
 
 	return n;
@@ -2424,6 +2380,7 @@ riscv_get_arg_info (struct riscv_arg_info *info, const CUMULATIVE_ARGS *cum,
   if (named)
     {
       riscv_aggregate_field fields[2];
+      unsigned tmp;
       unsigned fregno = fpr_base + info->fpr_offset;
       unsigned gregno = gpr_base + info->gpr_offset;
 
@@ -2473,8 +2430,11 @@ riscv_get_arg_info (struct riscv_arg_info *info, const CUMULATIVE_ARGS *cum,
 	  info->num_gprs = 1;
 	  info->num_fprs = 1;
 
-	  if (!SCALAR_FLOAT_TYPE_P (fields[0].type))
-	    std::swap (fregno, gregno);
+	  if (!SCALAR_FLOAT_TYPE_P (fields[0].type)){
+              tmp = fregno;
+              fregno = gregno;
+              gregno = tmp;
+          }
 
 	  return riscv_pass_fpr_pair (mode, fregno, TYPE_MODE (fields[0].type),
 				      fields[0].offset,
@@ -2505,10 +2465,9 @@ riscv_get_arg_info (struct riscv_arg_info *info, const CUMULATIVE_ARGS *cum,
 /* Implement TARGET_FUNCTION_ARG.  */
 
 static rtx
-riscv_function_arg (cumulative_args_t cum_v, enum machine_mode mode,
+riscv_function_arg (CUMULATIVE_ARGS *cum, enum machine_mode mode,
 		    const_tree type, bool named)
 {
-  CUMULATIVE_ARGS *cum = get_cumulative_args (cum_v);
   struct riscv_arg_info info;
 
   if (mode == VOIDmode)
@@ -2518,12 +2477,10 @@ riscv_function_arg (cumulative_args_t cum_v, enum machine_mode mode,
 }
 
 /* Implement TARGET_FUNCTION_ARG_ADVANCE.  */
-
 static void
-riscv_function_arg_advance (cumulative_args_t cum_v, enum machine_mode mode,
+riscv_function_arg_advance (CUMULATIVE_ARGS *cum, enum machine_mode mode,
 			    const_tree type, bool named)
 {
-  CUMULATIVE_ARGS *cum = get_cumulative_args (cum_v);
   struct riscv_arg_info info;
 
   riscv_get_arg_info (&info, cum, mode, type, named, false);
@@ -2539,12 +2496,12 @@ riscv_function_arg_advance (cumulative_args_t cum_v, enum machine_mode mode,
 /* Implement TARGET_ARG_PARTIAL_BYTES.  */
 
 static int
-riscv_arg_partial_bytes (cumulative_args_t cum,
+riscv_arg_partial_bytes (CUMULATIVE_ARGS *cum,
 			 enum machine_mode mode, tree type, bool named)
 {
   struct riscv_arg_info arg;
 
-  riscv_get_arg_info (&arg, get_cumulative_args (cum), mode, type, named, false);
+  riscv_get_arg_info (&arg, cum, mode, type, named, false);
   return arg.stack_p ? arg.num_gprs * UNITS_PER_WORD : 0;
 }
 
@@ -2574,14 +2531,12 @@ riscv_function_value (const_tree type, const_tree func, enum machine_mode mode)
 }
 
 /* Implement TARGET_PASS_BY_REFERENCE. */
-
 static bool
-riscv_pass_by_reference (cumulative_args_t cum_v, enum machine_mode mode,
+riscv_pass_by_reference (CUMULATIVE_ARGS *cum, enum machine_mode mode,
 			 const_tree type, bool named)
 {
   HOST_WIDE_INT size = type ? int_size_in_bytes (type) : GET_MODE_SIZE (mode);
   struct riscv_arg_info info;
-  CUMULATIVE_ARGS *cum = get_cumulative_args (cum_v);
 
   /* ??? std_gimplify_va_arg_expr passes NULL for cum.  Fortunately, we
      never pass variadic arguments in floating-point registers, so we can
@@ -2599,23 +2554,21 @@ riscv_pass_by_reference (cumulative_args_t cum_v, enum machine_mode mode,
 }
 
 /* Implement TARGET_RETURN_IN_MEMORY.  */
-
 static bool
 riscv_return_in_memory (const_tree type, const_tree fndecl ATTRIBUTE_UNUSED)
 {
-  CUMULATIVE_ARGS args;
-  cumulative_args_t cum = pack_cumulative_args (&args);
+  CUMULATIVE_ARGS cum;
 
   /* The rules for returning in memory are the same as for passing the
      first named argument by reference.  */
-  memset (&args, 0, sizeof args);
-  return riscv_pass_by_reference (cum, TYPE_MODE (type), type, true);
+  memset (&cum, 0, sizeof cum);
+  return riscv_pass_by_reference (&cum, TYPE_MODE (type), type, true);
 }
 
 /* Implement TARGET_SETUP_INCOMING_VARARGS.  */
 
 static void
-riscv_setup_incoming_varargs (cumulative_args_t cum, enum machine_mode mode,
+riscv_setup_incoming_varargs (CUMULATIVE_ARGS *cum, enum machine_mode mode,
 			     tree type, int *pretend_size ATTRIBUTE_UNUSED,
 			     int no_rtl)
 {
@@ -2625,15 +2578,15 @@ riscv_setup_incoming_varargs (cumulative_args_t cum, enum machine_mode mode,
   /* The caller has advanced CUM up to, but not beyond, the last named
      argument.  Advance a local copy of CUM past the last "real" named
      argument, to find out how many registers are left over.  */
-  local_cum = *get_cumulative_args (cum);
-  riscv_function_arg_advance (pack_cumulative_args (&local_cum), mode, type, 1);
+  local_cum = *cum;
+  riscv_function_arg_advance (&local_cum, mode, type, 1);
 
   /* Found out how many registers we need to save.  */
   gp_saved = MAX_ARGS_IN_REGISTERS - local_cum.num_gprs;
 
   if (!no_rtl && gp_saved > 0)
     {
-      rtx ptr = plus_constant (Pmode, virtual_incoming_args_rtx,
+      rtx ptr = plus_constant (virtual_incoming_args_rtx,
 			       REG_PARM_STACK_SPACE (cfun->decl)
 			       - gp_saved * UNITS_PER_WORD);
       rtx mem = gen_frame_mem (BLKmode, ptr);
@@ -2651,7 +2604,7 @@ riscv_setup_incoming_varargs (cumulative_args_t cum, enum machine_mode mode,
 static void
 riscv_va_start (tree valist, rtx nextarg)
 {
-  nextarg = plus_constant (Pmode, nextarg, -cfun->machine->varargs_size);
+  nextarg = plus_constant (nextarg, -cfun->machine->varargs_size);
   std_expand_builtin_va_start (valist, nextarg);
 }
 
@@ -2703,54 +2656,54 @@ riscv_print_operand_reloc (FILE *file, rtx op, bool hi_reloc)
 /* Return true if the .AQ suffix should be added to an AMO to implement the
    acquire portion of memory model MODEL.  */
 
-static bool
-riscv_memmodel_needs_amo_acquire (enum memmodel model)
-{
-  switch (model)
-    {
-      case MEMMODEL_ACQ_REL:
-      case MEMMODEL_SEQ_CST:
-      case MEMMODEL_SYNC_SEQ_CST:
-      case MEMMODEL_ACQUIRE:
-      case MEMMODEL_CONSUME:
-      case MEMMODEL_SYNC_ACQUIRE:
-	return true;
-
-      case MEMMODEL_RELEASE:
-      case MEMMODEL_SYNC_RELEASE:
-      case MEMMODEL_RELAXED:
-	return false;
-
-      default:
-	gcc_unreachable ();
-    }
-}
+//static bool
+//riscv_memmodel_needs_amo_acquire (enum memmodel model)
+//{
+//  switch (model)
+//    {
+//      case MEMMODEL_ACQ_REL:
+//      case MEMMODEL_SEQ_CST:
+//      case MEMMODEL_SYNC_SEQ_CST:
+//      case MEMMODEL_ACQUIRE:
+//      case MEMMODEL_CONSUME:
+//      case MEMMODEL_SYNC_ACQUIRE:
+//	return true;
+//
+//      case MEMMODEL_RELEASE:
+//      case MEMMODEL_SYNC_RELEASE:
+//      case MEMMODEL_RELAXED:
+//	return false;
+//
+//      default:
+//	gcc_unreachable ();
+//    }
+//}
 
 /* Return true if a FENCE should be emitted to before a memory access to
    implement the release portion of memory model MODEL.  */
 
-static bool
-riscv_memmodel_needs_release_fence (enum memmodel model)
-{
-  switch (model)
-    {
-      case MEMMODEL_ACQ_REL:
-      case MEMMODEL_SEQ_CST:
-      case MEMMODEL_SYNC_SEQ_CST:
-      case MEMMODEL_RELEASE:
-      case MEMMODEL_SYNC_RELEASE:
-	return true;
-
-      case MEMMODEL_ACQUIRE:
-      case MEMMODEL_CONSUME:
-      case MEMMODEL_SYNC_ACQUIRE:
-      case MEMMODEL_RELAXED:
-	return false;
-
-      default:
-	gcc_unreachable ();
-    }
-}
+//static bool
+//riscv_memmodel_needs_release_fence (enum memmodel model)
+//{
+//  switch (model)
+//    {
+//      case MEMMODEL_ACQ_REL:
+//      case MEMMODEL_SEQ_CST:
+//      case MEMMODEL_SYNC_SEQ_CST:
+//      case MEMMODEL_RELEASE:
+//      case MEMMODEL_SYNC_RELEASE:
+//	return true;
+//
+//      case MEMMODEL_ACQUIRE:
+//      case MEMMODEL_CONSUME:
+//      case MEMMODEL_SYNC_ACQUIRE:
+//      case MEMMODEL_RELAXED:
+//	return false;
+//
+//      default:
+//	gcc_unreachable ();
+//    }
+//}
 
 /* Implement TARGET_PRINT_OPERAND.  The RISCV-specific operand codes are:
 
@@ -2765,7 +2718,7 @@ riscv_memmodel_needs_release_fence (enum memmodel model)
 static void
 riscv_print_operand (FILE *file, rtx op, int letter)
 {
-  enum machine_mode mode = GET_MODE (op);
+  //enum machine_mode mode = GET_MODE (op);
   enum rtx_code code = GET_CODE (op);
 
   switch (letter)
@@ -2785,15 +2738,17 @@ riscv_print_operand (FILE *file, rtx op, int letter)
       fputs (GET_RTX_NAME (code), file);
       break;
 
-    case 'A':
-      if (riscv_memmodel_needs_amo_acquire ((enum memmodel) INTVAL (op)))
-	fputs (".aq", file);
-      break;
+    // EKAITZ: It never appears in the assembly output of the .md files
+    //case 'A':
+    //  if (riscv_memmodel_needs_amo_acquire ((enum memmodel) INTVAL (op)))
+	//fputs (".aq", file);
+    //  break;
 
-    case 'F':
-      if (riscv_memmodel_needs_release_fence ((enum memmodel) INTVAL (op)))
-	fputs ("fence rw,w; ", file);
-      break;
+    // EKAITZ: It never appears in the assembly output of the .md files
+    //case 'F':
+    //  if (riscv_memmodel_needs_release_fence ((enum memmodel) INTVAL (op)))
+	//fputs ("fence rw,w; ", file);
+    //  break;
 
     default:
       switch (code)
@@ -2808,7 +2763,7 @@ riscv_print_operand (FILE *file, rtx op, int letter)
 	  if (letter && letter != 'z')
 	    output_operand_lossage ("invalid use of '%%%c'", letter);
 	  else
-	    output_address (mode, XEXP (op, 0));
+	    output_address (XEXP (op, 0));
 	  break;
 
 	default:
@@ -2826,7 +2781,7 @@ riscv_print_operand (FILE *file, rtx op, int letter)
 /* Implement TARGET_PRINT_OPERAND_ADDRESS.  */
 
 static void
-riscv_print_operand_address (FILE *file, machine_mode mode ATTRIBUTE_UNUSED, rtx x)
+riscv_print_operand_address (FILE *file, rtx x)
 {
   struct riscv_address_info addr;
 
@@ -2924,7 +2879,7 @@ riscv_set_frame_expr (rtx frame_pattern)
 static rtx
 riscv_frame_set (rtx mem, rtx reg)
 {
-  rtx set = gen_rtx_SET (mem, reg);
+  rtx set = gen_rtx_SET (VOIDmode, mem, reg);
   RTX_FRAME_RELATED_P (set) = 1;
   return set;
 }
@@ -2951,6 +2906,7 @@ riscv_save_reg_p (unsigned int regno)
 }
 
 /* Determine whether to call GPR save/restore routines.  */
+
 static bool
 riscv_use_save_libcall (const struct riscv_frame_info *frame)
 {
@@ -3157,7 +3113,7 @@ riscv_save_restore_reg (enum machine_mode mode, int regno,
 {
   rtx mem;
 
-  mem = gen_frame_mem (mode, plus_constant (Pmode, stack_pointer_rtx, offset));
+  mem = gen_frame_mem (mode, plus_constant (stack_pointer_rtx, offset));
   fn (gen_rtx_REG (mode, regno), mem);
 }
 
@@ -3274,11 +3230,9 @@ riscv_adjust_libcall_cfi_prologue ()
 	  offset = saved_size - ((regno - S2_REGNUM + 4) * UNITS_PER_WORD);
 
 	reg = gen_rtx_REG (SImode, regno);
-	mem = gen_frame_mem (SImode, plus_constant (Pmode,
-						    stack_pointer_rtx,
-						    offset));
+	mem = gen_frame_mem (SImode, plus_constant (stack_pointer_rtx, offset));
 
-	insn = gen_rtx_SET (mem, reg);
+	insn = gen_rtx_SET (VOIDmode, mem, reg);
 	dwarf = alloc_reg_note (REG_CFA_OFFSET, insn, dwarf);
       }
 
@@ -3309,7 +3263,7 @@ riscv_expand_prologue (void)
   unsigned mask = frame->mask;
   rtx insn;
 
-  if (flag_stack_usage_info)
+  if (flag_stack_usage)
     current_function_static_stack_size = size;
 
   /* When optimizing for size, call a subroutine to save the registers.  */
@@ -3368,8 +3322,8 @@ riscv_expand_prologue (void)
 				    RISCV_PROLOGUE_TEMP (Pmode)));
 
 	  /* Describe the effect of the previous instructions.  */
-	  insn = plus_constant (Pmode, stack_pointer_rtx, -size);
-	  insn = gen_rtx_SET (stack_pointer_rtx, insn);
+	  insn = plus_constant (stack_pointer_rtx, -size);
+	  insn = gen_rtx_SET (VOIDmode, stack_pointer_rtx, insn);
 	  riscv_set_frame_expr (insn);
 	}
     }
@@ -3449,7 +3403,7 @@ riscv_expand_epilogue (bool sibcall_p)
       rtx cfa_adjust_value = gen_rtx_PLUS (
 			       Pmode, hard_frame_pointer_rtx,
 			       GEN_INT (-frame->hard_frame_pointer_offset));
-      rtx cfa_adjust_rtx = gen_rtx_SET (stack_pointer_rtx, cfa_adjust_value);
+      rtx cfa_adjust_rtx = gen_rtx_SET (VOIDmode, stack_pointer_rtx, cfa_adjust_value);
       dwarf = alloc_reg_note (REG_CFA_ADJUST_CFA, cfa_adjust_rtx, dwarf);
       RTX_FRAME_RELATED_P (insn) = 1;
 
@@ -3614,8 +3568,7 @@ riscv_hard_regno_nregs (int regno, enum machine_mode mode)
 }
 
 /* Implement CLASS_MAX_NREGS.  */
-
-static unsigned char
+unsigned char
 riscv_class_max_nregs (reg_class_t rclass, enum machine_mode mode)
 {
   if (reg_class_subset_p (FP_REGS, rclass))
@@ -3674,7 +3627,7 @@ riscv_output_mi_thunk (FILE *file, tree thunk_fndecl ATTRIBUTE_UNUSED,
 		      tree function)
 {
   rtx this_rtx, temp1, temp2, fnaddr;
-  rtx_insn *insn;
+  rtx insn;
 
   /* Pretend to be a post-reload pass while generating rtl.  */
   reload_completed = 1;
@@ -3746,7 +3699,7 @@ riscv_output_mi_thunk (FILE *file, tree thunk_fndecl ATTRIBUTE_UNUSED,
 static struct machine_function *
 riscv_init_machine_status (void)
 {
-  return ggc_cleared_alloc<machine_function> ();
+  return ggc_alloc_cleared_machine_function ();
 }
 
 /* Implement TARGET_OPTION_OVERRIDE.  */
@@ -3993,9 +3946,8 @@ riscv_function_ok_for_sibcall (tree decl ATTRIBUTE_UNUSED,
 }
 
 /* Implement TARGET_CANNOT_COPY_INSN_P.  */
-
 static bool
-riscv_cannot_copy_insn_p (rtx_insn *insn)
+riscv_cannot_copy_insn_p (rtx insn)
 {
   return recog_memoized (insn) >= 0 && get_attr_cannot_copy (insn);
 }
@@ -4036,10 +3988,6 @@ riscv_cannot_copy_insn_p (rtx_insn *insn)
 #define TARGET_ASM_FILE_START riscv_file_start
 #undef TARGET_ASM_FILE_START_FILE_DIRECTIVE
 #define TARGET_ASM_FILE_START_FILE_DIRECTIVE true
-
-#undef TARGET_EXPAND_BUILTIN_VA_START
-#define TARGET_EXPAND_BUILTIN_VA_START riscv_va_start
-
 #undef  TARGET_PROMOTE_FUNCTION_MODE
 #define TARGET_PROMOTE_FUNCTION_MODE default_promote_function_mode_always_promote
 
@@ -4121,17 +4069,20 @@ riscv_cannot_copy_insn_p (rtx_insn *insn)
 #undef TARGET_CANNOT_COPY_INSN_P
 #define TARGET_CANNOT_COPY_INSN_P riscv_cannot_copy_insn_p
 
-#undef TARGET_ATOMIC_ASSIGN_EXPAND_FENV
-#define TARGET_ATOMIC_ASSIGN_EXPAND_FENV riscv_atomic_assign_expand_fenv
+// #undef TARGET_ATOMIC_ASSIGN_EXPAND_FENV
+// #define TARGET_ATOMIC_ASSIGN_EXPAND_FENV riscv_atomic_assign_expand_fenv
 
-#undef TARGET_INIT_BUILTINS
-#define TARGET_INIT_BUILTINS riscv_init_builtins
+// #undef TARGET_EXPAND_BUILTIN_VA_START
+// #define TARGET_EXPAND_BUILTIN_VA_START riscv_va_start
 
-#undef TARGET_BUILTIN_DECL
-#define TARGET_BUILTIN_DECL riscv_builtin_decl
+// #undef TARGET_INIT_BUILTINS
+// #define TARGET_INIT_BUILTINS riscv_init_builtins
 
-#undef TARGET_EXPAND_BUILTIN
-#define TARGET_EXPAND_BUILTIN riscv_expand_builtin
+// #undef TARGET_BUILTIN_DECL
+// #define TARGET_BUILTIN_DECL riscv_builtin_decl
+
+// #undef TARGET_EXPAND_BUILTIN
+// #define TARGET_EXPAND_BUILTIN riscv_expand_builtin
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 
