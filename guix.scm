@@ -10,6 +10,7 @@
   #:use-module (gnu packages linux)
   #:use-module (gnu packages maths)
   #:use-module (gnu packages commencement)
+  #:use-module (gnu packages cross-base)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages multiprecision)
   #:use-module (gnu packages base)
@@ -52,12 +53,27 @@
               #:recursive? #t
               #:select? discard-git))
 
+    #;(propagated-inputs
+      `(("libc-for-target"     ,(cross-libc     target))
+        ("binutils-for-target" ,(cross-binutils target))))
     (inputs `(("flex" ,flex-2.5)
               ("ppl" ,ppl)
               ,@(package-inputs gcc-4.7)))
 
     (arguments
       (substitute-keyword-arguments (package-arguments gcc-4.7)
+         ;; Make only gcc target to make sure this thing compiles
+         ;; Later we must make this compile the g++ and stuff...
+         ((#:phases phases)
+          #~(modify-phases #$phases
+              (replace 'build
+                       (lambda _
+                         (invoke "make" "all-gcc")
+                         #t))
+              (replace 'install
+                       (lambda _
+                         (invoke "make" "install-gcc")
+                         #t))))
 
          ((#:configure-flags configure-flags)
           `(let ((out   (assoc-ref %outputs "out"))
@@ -107,8 +123,9 @@
 
                   "--enable-threads=single")))))))
 
-(define-public gcc-riscv  (gcc-from-source "riscv64-unknown-linux-gnu"))
-(define-public gcc-native (gcc-from-source))
+(define-public gcc-riscv   (gcc-from-source "riscv64-unknown-linux-gnu"))
+(define-public gcc-mips    (gcc-from-source "mips-unknown-linux-gnu"))
+(define-public gcc-native  (gcc-from-source))
 
 (define-public gcc-native-toolchain (make-gcc-toolchain gcc-native glibc))
 
