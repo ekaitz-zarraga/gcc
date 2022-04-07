@@ -3952,6 +3952,97 @@ riscv_cannot_copy_insn_p (rtx insn)
   return recog_memoized (insn) >= 0 && get_attr_cannot_copy (insn);
 }
 
+/* Implement TARGET_OPTION_OPTIMIZATION_TABLE.  */
+static const struct default_options riscv_option_optimization_table[] =
+  {
+    { OPT_LEVELS_1_PLUS, OPT_fomit_frame_pointer, NULL, 1 },
+    { OPT_LEVELS_NONE, 0, NULL, 0 }
+  };
+
+/* Parse a RISC-V ISA string into an option mask.  */
+
+static void
+riscv_parse_arch_string (const char *isa)
+{
+  const char *p = isa;
+
+  if (strncmp (p, "rv32", 4) == 0)
+    target_flags &= ~MASK_64BIT, p += 4;
+  else if (strncmp (p, "rv64", 4) == 0)
+    target_flags |= MASK_64BIT, p += 4;
+  else
+    {
+      error("-march=%s: ISA string must begin with rv32 or rv64", isa);
+      return;
+    }
+
+  if (*p == 'g')
+    {
+      p++;
+
+      target_flags |= MASK_MUL;
+      target_flags |= MASK_ATOMIC;
+      target_flags |= MASK_HARD_FLOAT;
+      target_flags |= MASK_DOUBLE_FLOAT;
+    }
+  else if (*p == 'i')
+    {
+      p++;
+
+      target_flags &= ~MASK_MUL;
+      if (*p == 'm')
+	target_flags |= MASK_MUL, p++;
+
+      target_flags &= ~MASK_ATOMIC;
+      if (*p == 'a')
+	target_flags |= MASK_ATOMIC, p++;
+
+      target_flags &= ~(MASK_HARD_FLOAT | MASK_DOUBLE_FLOAT);
+      if (*p == 'f')
+	{
+	  target_flags |= MASK_HARD_FLOAT, p++;
+
+	  if (*p == 'd')
+	    {
+	      target_flags |= MASK_DOUBLE_FLOAT;
+	      p++;
+	    }
+	}
+    }
+  else
+    {
+      error ("-march=%s: invalid ISA string", isa);
+      return;
+    }
+
+  target_flags &= ~MASK_RVC;
+  if (*p == 'c')
+    target_flags |= MASK_RVC, p++;
+
+  if (*p)
+    {
+      error ("-march=%s: unsupported ISA substring %qs", isa, p);
+      return;
+    }
+}
+
+/* Implement TARGET_HANDLE_OPTION.  */
+
+static bool
+riscv_handle_option (size_t code, const char *arg, int value ATTRIBUTE_UNUSED)
+{
+  switch (code)
+    {
+    case OPT_march_:
+      riscv_parse_arch_string (arg);
+      return true;
+
+    default:
+      return true;
+    }
+}
+
+
 /* Initialize the GCC target structure.  */
 #undef TARGET_ASM_ALIGNED_HI_OP
 #define TARGET_ASM_ALIGNED_HI_OP "\t.half\t"
@@ -3962,6 +4053,12 @@ riscv_cannot_copy_insn_p (rtx insn)
 
 #undef TARGET_OPTION_OVERRIDE
 #define TARGET_OPTION_OVERRIDE riscv_option_override
+
+#undef TARGET_OPTION_OPTIMIZATION_TABLE
+#define TARGET_OPTION_OPTIMIZATION_TABLE riscv_option_optimization_table
+
+#undef TARGET_HANDLE_OPTION
+#define TARGET_HANDLE_OPTION riscv_handle_option
 
 #undef TARGET_LEGITIMIZE_ADDRESS
 #define TARGET_LEGITIMIZE_ADDRESS riscv_legitimize_address
