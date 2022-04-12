@@ -33,13 +33,14 @@
 
 ;; Memory barriers.
 
-(define_expand "mem_thread_fence"
-  [(match_operand:SI 0 "const_int_operand" "")] ;; model
+(define_expand "memory_barrier"
+  [(set (match_dup 0)
+	(unspec:BLK [(match_dup 0)] UNSPEC_MEMORY_BARRIER))]
   ""
 {
-  rtx mem = gen_rtx_MEM (BLKmode, gen_rtx_SCRATCH (Pmode));
-  MEM_VOLATILE_P (mem) = 1;
-  emit_insn (gen_mem_thread_fence_1 (mem, operands[0]));
+  operands[0] = gen_rtx_MEM (BLKmode, gen_rtx_SCRATCH (Pmode));
+  MEM_VOLATILE_P (operands[0]) = 1;
+  emit_insn (gen_mem_thread_fence_1 (operands[0]));
   DONE;
 })
 
@@ -47,8 +48,7 @@
 ;; conservatively emit a full FENCE.
 (define_insn "mem_thread_fence_1"
   [(set (match_operand:BLK 0 "" "")
-	(unspec:BLK [(match_dup 0)] UNSPEC_MEMORY_BARRIER))
-   (match_operand:SI 1 "const_int_operand" "")] ;; model
+	(unspec:BLK [(match_dup 0)] UNSPEC_MEMORY_BARRIER))]
   ""
   "fence\trw,rw")
 

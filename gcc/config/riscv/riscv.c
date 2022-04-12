@@ -2653,58 +2653,6 @@ riscv_print_operand_reloc (FILE *file, rtx op, bool hi_reloc)
   fputc (')', file);
 }
 
-/* Return true if the .AQ suffix should be added to an AMO to implement the
-   acquire portion of memory model MODEL.  */
-
-//static bool
-//riscv_memmodel_needs_amo_acquire (enum memmodel model)
-//{
-//  switch (model)
-//    {
-//      case MEMMODEL_ACQ_REL:
-//      case MEMMODEL_SEQ_CST:
-//      case MEMMODEL_SYNC_SEQ_CST:
-//      case MEMMODEL_ACQUIRE:
-//      case MEMMODEL_CONSUME:
-//      case MEMMODEL_SYNC_ACQUIRE:
-//	return true;
-//
-//      case MEMMODEL_RELEASE:
-//      case MEMMODEL_SYNC_RELEASE:
-//      case MEMMODEL_RELAXED:
-//	return false;
-//
-//      default:
-//	gcc_unreachable ();
-//    }
-//}
-
-/* Return true if a FENCE should be emitted to before a memory access to
-   implement the release portion of memory model MODEL.  */
-
-//static bool
-//riscv_memmodel_needs_release_fence (enum memmodel model)
-//{
-//  switch (model)
-//    {
-//      case MEMMODEL_ACQ_REL:
-//      case MEMMODEL_SEQ_CST:
-//      case MEMMODEL_SYNC_SEQ_CST:
-//      case MEMMODEL_RELEASE:
-//      case MEMMODEL_SYNC_RELEASE:
-//	return true;
-//
-//      case MEMMODEL_ACQUIRE:
-//      case MEMMODEL_CONSUME:
-//      case MEMMODEL_SYNC_ACQUIRE:
-//      case MEMMODEL_RELAXED:
-//	return false;
-//
-//      default:
-//	gcc_unreachable ();
-//    }
-//}
-
 /* Implement TARGET_PRINT_OPERAND.  The RISCV-specific operand codes are:
 
    'h'	Print the high-part relocation associated with OP, after stripping
@@ -2738,17 +2686,15 @@ riscv_print_operand (FILE *file, rtx op, int letter)
       fputs (GET_RTX_NAME (code), file);
       break;
 
-    // EKAITZ: It never appears in the assembly output of the .md files
-    //case 'A':
-    //  if (riscv_memmodel_needs_amo_acquire ((enum memmodel) INTVAL (op)))
-	//fputs (".aq", file);
-    //  break;
+    case 'A':
+      // Always add the .aq suffix, we don't want to check the memory model
+      fputs (".aq", file);
+      break;
 
-    // EKAITZ: It never appears in the assembly output of the .md files
-    //case 'F':
-    //  if (riscv_memmodel_needs_release_fence ((enum memmodel) INTVAL (op)))
-	//fputs ("fence rw,w; ", file);
-    //  break;
+    case 'F':
+      // Always add the fence, we don't want to check the memory model
+      fputs ("fence rw,w; ", file);
+      break;
 
     default:
       switch (code)
