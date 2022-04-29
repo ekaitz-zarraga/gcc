@@ -42,6 +42,15 @@
          (end   (+ 4 start)))
   (not (false-if-exception (equal? ".git" (substring path start end))))))
 
+
+#;(define glibc-all
+  (package 
+    (name "glibc-all")
+    ; Include all outputs in out so we can use -static
+    ; Use trivial-build-system, then traverse inputs and copy them to `out` in
+    ; the #:builder `argument`: use bootstrap-mes as a reference.
+    ))
+
 (define* (gcc-from-source #:optional
                           (target %host-type)
                           (build  %host-type)
@@ -53,28 +62,13 @@
               #:recursive? #t
               #:select? discard-git))
 
-    #;(propagated-inputs
-      `(("libc-for-target"     ,(cross-libc     target))
-        ("binutils-for-target" ,(cross-binutils target))))
     (inputs `(("flex" ,flex-2.5)
               ("ppl" ,ppl)
+              ("binutils-for-target" ,(cross-binutils target))
               ,@(package-inputs gcc-4.7)))
 
     (arguments
       (substitute-keyword-arguments (package-arguments gcc-4.7)
-         ;; Make only gcc target to make sure this thing compiles
-         ;; Later we must make this compile the g++ and stuff...
-         ((#:phases phases)
-          #~(modify-phases #$phases
-              (replace 'build
-                       (lambda _
-                         (invoke "make" "all-gcc")
-                         #t))
-              (replace 'install
-                       (lambda _
-                         (invoke "make" "install-gcc")
-                         #t))))
-
          ((#:configure-flags configure-flags)
           `(let ((out   (assoc-ref %outputs "out"))
                  (libc  (assoc-ref %build-inputs "libc")))
@@ -84,15 +78,7 @@
                   ,(string-append "--build="  build)
                   ,(string-append "--host="   host)
                   ,(string-append "--target=" target)
-
-                  (let ((libc (assoc-ref %build-inputs "libc")))
-                     (if libc
-                       (string-append "--with-native-system-header-dir=" libc
-                                      "/include")
-                       "--without-headers"))
-
-                  "CPP=cpp"
-
+                  (string-append "--with-native-system-header-dir=" libc "/include")
                   "--disable-nls"
                   "--disable-coverage"
                   "--disable-decimal-float"
@@ -128,5 +114,7 @@
 (define-public gcc-native  (gcc-from-source))
 
 (define-public gcc-native-toolchain (make-gcc-toolchain gcc-native glibc))
+
+;gcc-native-toolchain
 
 gcc-riscv
