@@ -19,6 +19,8 @@ along with GCC; see the file COPYING3.  If not see
 
 #define TARGET_OS_CPP_BUILTINS()  LINUX_TARGET_OS_CPP_BUILTINS()
 
+#define MD_UNWIND_SUPPORT "config/riscv/linux-unwind.h"
+
 #define GLIBC_DYNAMIC_LINKER "/lib/ld-linux-riscv" XLEN_SPEC "-" ABI_SPEC ".so.1"
 
 /* Because RISC-V only has word-sized atomics, it requries libatomic where
@@ -39,3 +41,4 @@ along with GCC; see the file COPYING3.  If not see
       %{rdynamic:-export-dynamic} \
       -dynamic-linker " LINUX_DYNAMIC_LINKER "} \
     %{static:-static}}"
+
