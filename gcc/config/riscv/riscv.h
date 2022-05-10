@@ -114,7 +114,7 @@ do {										\
 #undef ASM_SPEC
 #define ASM_SPEC "\
 %(subtarget_asm_debugging_spec) \
-%{fpic|fPIC|fpie|fPIE:-k}\
+%{fpic|fpie:-fpic} %{fPIC|fPIE:-fpic} \
 %{march=*} \
 %{mabi=*} \
 %(subtarget_asm_spec)"
