@@ -2062,6 +2062,7 @@ riscv*-*-linux*)
 	*) echo "Unknown value for enable_multilib"; exit 1
 	esac
 	tmake_file="${tmake_file} riscv/t-riscv riscv/t-linux"
+	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o crtendS.o crtbeginT.o"
 	gnu_ld=yes
 	gas=yes
 	# Force .init_array support.  The configure script cannot always
@@ -2076,6 +2077,7 @@ riscv*-*-elf*)
 	*) echo "Unknown value for enable_multilib"; exit 1
 	esac
 	tmake_file="${tmake_file} riscv/t-riscv"
+	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o"
 	gnu_ld=yes
 	gas=yes
 	# Force .init_array support.  The configure script cannot always
