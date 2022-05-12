@@ -117,4 +117,12 @@
 
 ;gcc-native-toolchain
 
-gcc-riscv
+;gcc-riscv
+(packages->manifest
+  (let* ((triplet "riscv64-unknown-linux-gnu")
+         (binutils (cross-binutils triplet))
+         (libc     (cross-libc     triplet)))
+    (list gcc-riscv
+          binutils
+          libc
+          (list libc "static"))))
