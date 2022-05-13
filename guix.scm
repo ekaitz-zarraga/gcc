@@ -1,20 +1,19 @@
-(define-module (guix)
-  #:use-module (ice-9 popen)
-  #:use-module (ice-9 rdelim)
-  #:use-module (guix packages)
-  #:use-module (guix utils)
-  #:use-module (guix gexp)
-  #:use-module (guix profiles)
-  #:use-module (guix download)
-  #:use-module (gnu packages gcc)
-  #:use-module (gnu packages linux)
-  #:use-module (gnu packages maths)
-  #:use-module (gnu packages commencement)
-  #:use-module (gnu packages cross-base)
-  #:use-module (gnu packages compression)
-  #:use-module (gnu packages multiprecision)
-  #:use-module (gnu packages base)
-  #:use-module (gnu packages flex))
+(use-modules (ice-9 popen)
+             (ice-9 rdelim)
+             (guix packages)
+             (guix utils)
+             (guix gexp)
+             (guix profiles)
+             (guix download)
+             (gnu packages gcc)
+             (gnu packages linux)
+             (gnu packages maths)
+             (gnu packages commencement)
+             (gnu packages cross-base)
+             (gnu packages compression)
+             (gnu packages multiprecision)
+             (gnu packages base)
+             (gnu packages flex))
 
 (define-public flex-2.5
   (package
@@ -81,8 +80,6 @@
                   (string-append "--with-native-system-header-dir=" libc "/include")
                   "--disable-nls"
                   "--disable-coverage"
-                  "--disable-decimal-float"
-                  "--disable-libatomic"
                   "--disable-libcilkrts"
                   "--disable-libgomp"
                   "--disable-libitm"
@@ -117,12 +114,4 @@
 
 ;gcc-native-toolchain
 
-;gcc-riscv
-(packages->manifest
-  (let* ((triplet "riscv64-unknown-linux-gnu")
-         (binutils (cross-binutils triplet))
-         (libc     (cross-libc     triplet)))
-    (list gcc-riscv
-          binutils
-          libc
-          (list libc "static"))))
+gcc-riscv
