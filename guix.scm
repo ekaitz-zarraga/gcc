@@ -63,7 +63,9 @@
 
     (inputs `(("flex" ,flex-2.5)
               ("ppl" ,ppl)
-              ("binutils-for-target" ,(cross-binutils target))
+              ,@(if (not (string=? target %host-type))
+                  `(("binutils-for-target" ,(cross-binutils target)))
+                  '())
               ,@(package-inputs gcc-4.7)))
 
     (arguments
@@ -113,5 +115,6 @@
 (define-public gcc-native-toolchain (make-gcc-toolchain gcc-native glibc))
 
 ;gcc-native-toolchain
+;gcc-native
 
 gcc-riscv
