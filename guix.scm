@@ -108,13 +108,13 @@
 
                   "--enable-threads=single")))))))
 
-(define-public gcc-riscv   (gcc-from-source "riscv64-unknown-linux-gnu"))
-(define-public gcc-mips    (gcc-from-source "mips-unknown-linux-gnu"))
+(define-public gcc-riscv   (gcc-from-source "riscv64-linux-gnu"))
+(define-public gcc-mips    (gcc-from-source "mips-linux-gnu"))
 (define-public gcc-native  (gcc-from-source))
 
 (define-public gcc-native-toolchain (make-gcc-toolchain gcc-native glibc))
 
 ;gcc-native-toolchain
 ;gcc-native
-
+;gcc-mips
 gcc-riscv
