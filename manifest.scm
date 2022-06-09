@@ -1,10 +1,9 @@
 (load "guix.scm")
 
 (packages->manifest
-  (let* ((triplet "riscv64-linux-gnu")
-         (binutils (cross-binutils triplet))
+  (let* ((binutils (cross-binutils triplet))
          (libc     (cross-libc     triplet)))
-    (list gcc-riscv
+    (list gcc-mine
           binutils
           libc
           (list libc "static"))))
