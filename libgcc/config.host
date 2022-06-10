@@ -501,12 +501,10 @@ powerpcle-*-eabisim*)
 powerpcle-*-eabi*)
 	;;
 riscv*-*-linux*)
-	tmake_file="${tmake_file} riscv/t-softfp${host_address} t-softfp riscv/t-elf riscv/t-elf${host_address}"
-	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o crtendS.o crtbeginT.o"
+	tmake_file="${tmake_file} riscv/t-softfp${host_address} t-softfp"
 	;;
 riscv*-*-*)
-	tmake_file="${tmake_file} riscv/t-softfp${host_address} t-softfp riscv/t-elf riscv/t-elf${host_address}"
-	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o"
+	tmake_file="${tmake_file} riscv/t-softfp${host_address} t-softfp"
 	;;
 rs6000-ibm-aix4.[3456789]* | powerpc-ibm-aix4.[3456789]*)
 	;;
