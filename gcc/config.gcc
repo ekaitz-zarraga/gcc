@@ -2061,7 +2061,15 @@ riscv*-*-linux*)
 	xyes) tmake_file="${tmake_file} riscv/t-linux-multilib" ;;
 	*) echo "Unknown value for enable_multilib"; exit 1
 	esac
-	tmake_file="${tmake_file} riscv/t-riscv riscv/t-linux"
+    case ${target} in
+        riscv64-*-linux*)
+        tmake_file="${tmake_file} riscv/t-riscv riscv/t-linux riscv/t-softfp64 soft-fp/t-softfp"
+        ;;
+        riscv32-*-linux*)
+        tmake_file="${tmake_file} riscv/t-riscv riscv/t-linux riscv/t-softfp32 soft-fp/t-softfp"
+        ;;
+    esac
+
 	gnu_ld=yes
 	gas=yes
 	# Force .init_array support.  The configure script cannot always
@@ -2075,7 +2083,14 @@ riscv*-*-elf*)
 	xyes) tmake_file="${tmake_file} riscv/t-elf-multilib" ;;
 	*) echo "Unknown value for enable_multilib"; exit 1
 	esac
-	tmake_file="${tmake_file} riscv/t-riscv"
+    case ${target} in
+        riscv64-*-elf*)
+        tmake_file="${tmake_file} riscv/t-riscv riscv/t-softfp64 soft-fp/t-softfp"
+        ;;
+        riscv32-*-elf*)
+        tmake_file="${tmake_file} riscv/t-riscv riscv/t-softfp32 soft-fp/t-softfp"
+        ;;
+    esac
 	gnu_ld=yes
 	gas=yes
 	# Force .init_array support.  The configure script cannot always
