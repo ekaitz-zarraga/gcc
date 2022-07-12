@@ -282,14 +282,12 @@ sext_hwi (HOST_WIDE_INT src, unsigned int prec)
 	 a signed value propagates the sign bit.
 	 We have to convert from signed to unsigned and back, because when left
 	 shifting signed values, any overflow is undefined behavior.  */
-      ((void)(0 && (prec < HOST_BITS_PER_WIDE_INT))); // Assertion
       int shift = HOST_BITS_PER_WIDE_INT - prec;
       return ((HOST_WIDE_INT) ((unsigned HOST_WIDE_INT) src << shift)) >> shift;
     }
 #else
     {
       /* Fall back to the slower, well defined path otherwise.  */
-      ((void)(0 && (prec < HOST_BITS_PER_WIDE_INT))); // Assertion
       HOST_WIDE_INT sign_mask = HOST_WIDE_INT_1 << (prec - 1);
       HOST_WIDE_INT value_mask = (HOST_WIDE_INT_1U << prec) - HOST_WIDE_INT_1U;
       return (((src & value_mask) ^ sign_mask) - sign_mask);
