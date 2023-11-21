@@ -1,9 +1,6 @@
 (load "guix.scm")
 
-(packages->manifest
-  (let* ((binutils (cross-binutils triplet))
-         (libc     (cross-libc     triplet)))
-    (list gcc-mine
-          binutils
-          libc
-          (list libc "static"))))
+(packages->manifest (list gcc-mine
+                          binutils
+                          glibc
+                          (list glibc "static")))

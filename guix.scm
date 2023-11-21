@@ -42,18 +42,7 @@
   (not (false-if-exception (equal? ".git" (substring path start end))))))
 
 
-#;(define glibc-all
-  (package 
-    (name "glibc-all")
-    ; Include all outputs in out so we can use -static
-    ; Use trivial-build-system, then traverse inputs and copy them to `out` in
-    ; the #:builder `argument`: use bootstrap-mes as a reference.
-    ))
-
-(define* (gcc-from-source #:optional
-                          (target %host-type)
-                          (build  %host-type)
-                          (host   %host-type))
+(define-public gcc-mine
   (package
     (inherit gcc-4.7)
     (version (string-append "4.6.4-HEAD"))
@@ -63,9 +52,6 @@
 
     (inputs `(("flex" ,flex-2.5)
               ("ppl" ,ppl)
-              ,@(if (not (string=? target %host-type))
-                  `(("binutils-for-target" ,(cross-binutils target)))
-                  '())
               ,@(package-inputs gcc-4.7)))
 
     (arguments
@@ -75,11 +61,6 @@
                  (libc  (assoc-ref %build-inputs "libc")))
 
             (list (string-append "--prefix=" out)
-
-                  ,(string-append "--build="  build)
-                  ,(string-append "--host="   host)
-                  ,(string-append "--target=" target)
-                  (string-append "--with-native-system-header-dir=" libc "/include")
                   "--disable-nls"
                   "--disable-coverage"
                   "--disable-libcilkrts"
@@ -101,19 +82,11 @@
                   "--with-system-zlib"
 
                   "--enable-languages=c"
-                  "--disable-bootstrap" ; This is a cross compiler, we may need to disable it
+                  "--disable-bootstrap"
 
                   "--enable-static"
                   "--disable-shared"
 
                   "--enable-threads=single")))))))
 
-;(define-public triplet  "mips64el-linux-gnu")
-(define-public triplet  "riscv64-linux-gnu")
-
-;(define-public gcc-native-toolchain (make-gcc-toolchain (gcc-from-source) glibc))
-;gcc-native-toolchain
-;gcc-native
-
-(define gcc-mine (gcc-from-source triplet))
 gcc-mine
