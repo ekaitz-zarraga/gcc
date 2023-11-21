@@ -42,7 +42,7 @@ riscv_fallback_frame_state (struct _Unwind_Context *context,
   struct rt_sigframe
   {
     siginfo_t info;
-    struct ucontext uc;
+    ucontext_t uc;
   };
 
   struct rt_sigframe *rt_;
@@ -68,7 +68,7 @@ riscv_fallback_frame_state (struct _Unwind_Context *context,
 
   new_cfa = (_Unwind_Ptr) sc;
   fs->regs.cfa_how = CFA_REG_OFFSET;
-  fs->regs.cfa_reg = __LIBGCC_STACK_POINTER_REGNUM__;
+  fs->regs.cfa_reg = STACK_POINTER_REGNUM;
   fs->regs.cfa_offset = new_cfa - (_Unwind_Ptr) context->cfa;
 
   for (i = 0; i < 32; i++)
@@ -78,7 +78,7 @@ riscv_fallback_frame_state (struct _Unwind_Context *context,
     }
 
   fs->signal_frame = 1;
-  fs->retaddr_column = __LIBGCC_DWARF_ALT_FRAME_RETURN_COLUMN__;
+  fs->retaddr_column = DWARF_ALT_FRAME_RETURN_COLUMN;
   fs->regs.reg[fs->retaddr_column].how = REG_SAVED_VAL_OFFSET;
   fs->regs.reg[fs->retaddr_column].loc.offset =
     (_Unwind_Ptr) sc->gregs[0] - new_cfa;
