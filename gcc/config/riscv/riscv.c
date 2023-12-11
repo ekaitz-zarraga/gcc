@@ -276,7 +276,8 @@ static const struct riscv_cpu_info riscv_cpu_info_table[] = {
 static const struct riscv_cpu_info *
 riscv_parse_cpu (const char *cpu_string)
 {
-  for (unsigned i = 0; i < ARRAY_SIZE (riscv_cpu_info_table); i++)
+  unsigned i;
+  for (i = 0; i < ARRAY_SIZE (riscv_cpu_info_table); i++)
     if (strcmp (riscv_cpu_info_table[i].name, cpu_string) == 0)
       return riscv_cpu_info_table + i;
 
@@ -1939,6 +1940,7 @@ riscv_extend_comparands (enum rtx_code code, rtx *op0, rtx *op1)
 static void
 riscv_emit_int_compare (enum rtx_code *code, rtx *op0, rtx *op1)
 {
+  size_t i;
   if (splittable_const_int_operand (*op1, VOIDmode))
     {
       HOST_WIDE_INT rhs = INTVAL (*op1);
@@ -1960,7 +1962,7 @@ riscv_emit_int_compare (enum rtx_code *code, rtx *op0, rtx *op1)
 	  };
 
 	  /* Convert e.g. (OP0 <= 0xFFF) into (OP0 < 0x1000).  */
-	  for (size_t i = 0; i < ARRAY_SIZE (mag_comparisons); i++)
+	  for (i = 0; i < ARRAY_SIZE (mag_comparisons); i++)
 	    {
 	      HOST_WIDE_INT new_rhs;
 	      bool increment = *code == mag_comparisons[i][0];
@@ -2165,6 +2167,13 @@ riscv_flatten_aggregate_field (const_tree type,
 			       riscv_aggregate_field fields[2],
 			       int n, HOST_WIDE_INT offset)
 {
+  tree f;
+  HOST_WIDE_INT pos;
+  HOST_WIDE_INT n_elts, i;
+  int j, n_subfields;
+  riscv_aggregate_field subfields[2];
+  tree index, elt_size;
+
   switch (TREE_CODE (type))
     {
     case RECORD_TYPE:
@@ -2174,13 +2183,13 @@ riscv_flatten_aggregate_field (const_tree type,
 	 || !host_integerp (TYPE_SIZE (type), 0))
        return -1;
 
-      for (tree f = TYPE_FIELDS (type); f; f = DECL_CHAIN (f))
+      for (f = TYPE_FIELDS (type); f; f = DECL_CHAIN (f))
 	if (TREE_CODE (f) == FIELD_DECL)
 	  {
 	    if (!TYPE_P (TREE_TYPE (f)))
 	      return -1;
 
-	    HOST_WIDE_INT pos = offset + int_byte_position (f);
+	    pos = offset + int_byte_position (f);
 	    n = riscv_flatten_aggregate_field (TREE_TYPE (f), fields, n, pos);
 	    if (n < 0)
 	      return -1;
@@ -2189,11 +2198,9 @@ riscv_flatten_aggregate_field (const_tree type,
 
     case ARRAY_TYPE:
       {
-	HOST_WIDE_INT n_elts;
-	riscv_aggregate_field subfields[2];
-	tree index = TYPE_DOMAIN (type);
-	tree elt_size = TYPE_SIZE_UNIT (TREE_TYPE (type));
-	int n_subfields = riscv_flatten_aggregate_field (TREE_TYPE (type),
+	index = TYPE_DOMAIN (type);
+	elt_size = TYPE_SIZE_UNIT (TREE_TYPE (type));
+	n_subfields = riscv_flatten_aggregate_field (TREE_TYPE (type),
 							 subfields, 0, offset);
 
 	/* Can't handle incomplete types nor sizes that are not fixed.  */
@@ -2212,8 +2219,8 @@ riscv_flatten_aggregate_field (const_tree type,
 		   - TREE_INT_CST_LOW (TYPE_MIN_VALUE (index));
 	gcc_assert (n_elts >= 0);
 
-	for (HOST_WIDE_INT i = 0; i < n_elts; i++)
-	  for (int j = 0; j < n_subfields; j++)
+	for (i = 0; i < n_elts; i++)
+	  for (j = 0; j < n_subfields; j++)
 	    {
 	      if (n >= 2)
 		return -1;
@@ -2231,7 +2238,7 @@ riscv_flatten_aggregate_field (const_tree type,
 	if (n != 0)
 	  return -1;
 
-	HOST_WIDE_INT elt_size = GET_MODE_SIZE (TYPE_MODE (TREE_TYPE (type)));
+	elt_size = GET_MODE_SIZE (TYPE_MODE (TREE_TYPE (type)));
 
 	if (elt_size <= UNITS_PER_FP_ARG)
 	  {
@@ -2282,9 +2289,10 @@ static unsigned
 riscv_pass_aggregate_in_fpr_pair_p (const_tree type,
 				    riscv_aggregate_field fields[2])
 {
+  int i;
   int n = riscv_flatten_aggregate_argument (type, fields);
 
-  for (int i = 0; i < n; i++)
+  for (i = 0; i < n; i++)
     if (!SCALAR_FLOAT_TYPE_P (fields[i].type))
       return 0;
 
@@ -2301,8 +2309,9 @@ riscv_pass_aggregate_in_fpr_and_gpr_p (const_tree type,
 {
   unsigned num_int = 0, num_float = 0;
   int n = riscv_flatten_aggregate_argument (type, fields);
+  int i;
 
-  for (int i = 0; i < n; i++)
+  for (i = 0; i < n; i++)
     {
       num_float += SCALAR_FLOAT_TYPE_P (fields[i].type);
       num_int += INTEGRAL_TYPE_P (fields[i].type);
@@ -2666,7 +2675,7 @@ riscv_print_operand_reloc (FILE *file, rtx op, bool hi_reloc)
 static void
 riscv_print_operand (FILE *file, rtx op, int letter)
 {
-  //enum machine_mode mode = GET_MODE (op);
+  /*enum machine_mode mode = GET_MODE (op);*/
   enum rtx_code code = GET_CODE (op);
 
   switch (letter)
@@ -2687,12 +2696,12 @@ riscv_print_operand (FILE *file, rtx op, int letter)
       break;
 
     case 'A':
-      // Always add the .aq suffix, we don't want to check the memory model
+      /* Always add the .aq suffix, we don't want to check the memory model*/
       fputs (".aq", file);
       break;
 
     case 'F':
-      // Always add the fence, we don't want to check the memory model
+      /* Always add the fence, we don't want to check the memory model*/
       fputs ("fence rw,w; ", file);
       break;
 
@@ -2867,7 +2876,8 @@ riscv_use_save_libcall (const struct riscv_frame_info *frame)
 static unsigned
 riscv_save_libcall_count (unsigned mask)
 {
-  for (unsigned n = GP_REG_LAST; n > GP_REG_FIRST; n--)
+  unsigned n;
+  for (n = GP_REG_LAST; n > GP_REG_FIRST; n--)
     if (BITSET_P (mask, n))
       return CALLEE_SAVED_REG_NUMBER (n) + 1;
   abort ();
@@ -3071,10 +3081,10 @@ static void
 riscv_for_each_saved_reg (HOST_WIDE_INT sp_offset, riscv_save_restore_fn fn)
 {
   HOST_WIDE_INT offset;
-
+  int regno;
   /* Save the link register and s-registers. */
   offset = cfun->machine->frame.gp_sp_offset - sp_offset;
-  for (int regno = GP_REG_FIRST; regno <= GP_REG_LAST-1; regno++)
+  for (regno = GP_REG_FIRST; regno <= GP_REG_LAST-1; regno++)
     if (BITSET_P (cfun->machine->frame.mask, regno - GP_REG_FIRST))
       {
 	riscv_save_restore_reg (word_mode, regno, offset, fn);
@@ -3084,7 +3094,7 @@ riscv_for_each_saved_reg (HOST_WIDE_INT sp_offset, riscv_save_restore_fn fn)
   /* This loop must iterate over the same space as its companion in
      riscv_compute_frame_info.  */
   offset = cfun->machine->frame.fp_sp_offset - sp_offset;
-  for (int regno = FP_REG_FIRST; regno <= FP_REG_LAST; regno++)
+  for (regno = FP_REG_FIRST; regno <= FP_REG_LAST; regno++)
     if (BITSET_P (cfun->machine->frame.fmask, regno - FP_REG_FIRST))
       {
 	enum machine_mode mode = TARGET_DOUBLE_FLOAT ? DFmode : SFmode;
@@ -3161,8 +3171,9 @@ riscv_adjust_libcall_cfi_prologue ()
   rtx adjust_sp_rtx, reg, mem, insn;
   int saved_size = cfun->machine->frame.save_libcall_adjustment;
   int offset;
+  int regno;
 
-  for (int regno = GP_REG_FIRST; regno <= GP_REG_LAST-1; regno++)
+  for (regno = GP_REG_FIRST; regno <= GP_REG_LAST-1; regno++)
     if (BITSET_P (cfun->machine->frame.mask, regno - GP_REG_FIRST))
       {
 	/* The save order is ra, s0, s1, s2 to s11.  */
@@ -3280,6 +3291,7 @@ riscv_adjust_libcall_cfi_epilogue ()
 {
   rtx dwarf = NULL_RTX;
   rtx adjust_sp_rtx, reg;
+  int regno;
   int saved_size = cfun->machine->frame.save_libcall_adjustment;
 
   /* Debug info for adjust sp.  */
@@ -3288,7 +3300,7 @@ riscv_adjust_libcall_cfi_epilogue ()
   dwarf = alloc_reg_note (REG_CFA_ADJUST_CFA, adjust_sp_rtx,
 			  dwarf);
 
-  for (int regno = GP_REG_FIRST; regno <= GP_REG_LAST-1; regno++)
+  for (regno = GP_REG_FIRST; regno <= GP_REG_LAST-1; regno++)
     if (BITSET_P (cfun->machine->frame.mask, regno - GP_REG_FIRST))
       {
 	reg = gen_rtx_REG (SImode, regno);
@@ -3315,7 +3327,7 @@ riscv_expand_epilogue (bool sibcall_p)
   HOST_WIDE_INT step2 = 0;
   bool use_restore_libcall = !sibcall_p && riscv_use_save_libcall (frame);
   rtx ra = gen_rtx_REG (Pmode, RETURN_ADDR_REGNUM);
-  rtx insn;
+  rtx insn, dwarf, cfa_adjust_rtx, cfa_adjust_value, adjust;
 
   /* We need to add memory barrier to prevent read from deallocated stack.  */
   bool need_barrier_p = (get_frame_size ()
@@ -3345,11 +3357,11 @@ riscv_expand_epilogue (bool sibcall_p)
 	       gen_add3_insn (stack_pointer_rtx, hard_frame_pointer_rtx,
 			      adjust));
 
-      rtx dwarf = NULL_RTX;
-      rtx cfa_adjust_value = gen_rtx_PLUS (
+      dwarf = NULL_RTX;
+      cfa_adjust_value = gen_rtx_PLUS (
 			       Pmode, hard_frame_pointer_rtx,
 			       GEN_INT (-frame->hard_frame_pointer_offset));
-      rtx cfa_adjust_rtx = gen_rtx_SET (VOIDmode, stack_pointer_rtx, cfa_adjust_value);
+      cfa_adjust_rtx = gen_rtx_SET (VOIDmode, stack_pointer_rtx, cfa_adjust_value);
       dwarf = alloc_reg_note (REG_CFA_ADJUST_CFA, cfa_adjust_rtx, dwarf);
       RTX_FRAME_RELATED_P (insn) = 1;
 
@@ -3372,7 +3384,7 @@ riscv_expand_epilogue (bool sibcall_p)
       need_barrier_p = false;
 
       /* Get an rtx for STEP1 that we can add to BASE.  */
-      rtx adjust = GEN_INT (step1);
+      adjust = GEN_INT (step1);
       if (!SMALL_OPERAND (step1))
 	{
 	  riscv_emit_move (RISCV_PROLOGUE_TEMP (Pmode), adjust);
@@ -3382,8 +3394,8 @@ riscv_expand_epilogue (bool sibcall_p)
       insn = emit_insn (
 	       gen_add3_insn (stack_pointer_rtx, stack_pointer_rtx, adjust));
 
-      rtx dwarf = NULL_RTX;
-      rtx cfa_adjust_rtx = gen_rtx_PLUS (Pmode, stack_pointer_rtx,
+      dwarf = NULL_RTX;
+      cfa_adjust_rtx = gen_rtx_PLUS (Pmode, stack_pointer_rtx,
 					 GEN_INT (step2));
 
       dwarf = alloc_reg_note (REG_CFA_DEF_CFA, cfa_adjust_rtx, dwarf);
@@ -3414,8 +3426,8 @@ riscv_expand_epilogue (bool sibcall_p)
       insn = emit_insn (gen_add3_insn (stack_pointer_rtx, stack_pointer_rtx,
 				       GEN_INT (step2)));
 
-      rtx dwarf = NULL_RTX;
-      rtx cfa_adjust_rtx = gen_rtx_PLUS (Pmode, stack_pointer_rtx,
+      dwarf = NULL_RTX;
+      cfa_adjust_rtx = gen_rtx_PLUS (Pmode, stack_pointer_rtx,
 					 const0_rtx);
       dwarf = alloc_reg_note (REG_CFA_DEF_CFA, cfa_adjust_rtx, dwarf);
       RTX_FRAME_RELATED_P (insn) = 1;
@@ -3425,7 +3437,7 @@ riscv_expand_epilogue (bool sibcall_p)
 
   if (use_restore_libcall)
     {
-      rtx dwarf = riscv_adjust_libcall_cfi_epilogue ();
+      dwarf = riscv_adjust_libcall_cfi_epilogue ();
       insn = emit_insn (gen_gpr_restore (GEN_INT (riscv_save_libcall_count (mask))));
       RTX_FRAME_RELATED_P (insn) = 1;
       REG_NOTES (insn) = dwarf;
@@ -3468,6 +3480,7 @@ bool
 riscv_hard_regno_mode_ok_p (unsigned int regno, enum machine_mode mode)
 {
   unsigned int nregs = riscv_hard_regno_nregs (regno, mode);
+  unsigned i;
 
   if (GP_REG_P (regno))
     {
@@ -3494,7 +3507,7 @@ riscv_hard_regno_mode_ok_p (unsigned int regno, enum machine_mode mode)
     return false;
 
   /* Require same callee-savedness for all registers.  */
-  for (unsigned i = 1; i < nregs; i++)
+  for (i = 1; i < nregs; i++)
     if (call_used_regs[regno] != call_used_regs[regno + i])
       return false;
 
@@ -3712,9 +3725,10 @@ riscv_option_override (void)
 static void
 riscv_conditional_register_usage (void)
 {
+  int regno;
   if (!TARGET_HARD_FLOAT)
     {
-      for (int regno = FP_REG_FIRST; regno <= FP_REG_LAST; regno++)
+      for (regno = FP_REG_FIRST; regno <= FP_REG_LAST; regno++)
 	fixed_regs[regno] = call_used_regs[regno] = 1;
     }
 }
@@ -3737,10 +3751,16 @@ riscv_register_priority (int regno)
 static void
 riscv_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
 {
-  rtx addr, end_addr, mem;
+  rtx addr, end_addr, mem, target_function, uimm_mask, imm12_mask, fixup_value,
+      hi_chain, lui_hi_chain, hi_func, lui_hi_func, lo_chain,
+      addi_lo_chain, lo_func, jr_lo_func;
   uint32_t trampoline[4];
   unsigned int i;
   HOST_WIDE_INT static_chain_offset, target_function_offset;
+
+  unsigned HOST_WIDE_INT lui_hi_chain_code, lui_hi_func_code;
+  unsigned HOST_WIDE_INT lo_chain_code, lo_func_code;
+
 
   /* Work out the offsets of the pointers from the start of the
      trampoline code.  */
@@ -3756,49 +3776,46 @@ riscv_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
     {
       chain_value = force_reg (Pmode, chain_value);
 
-      rtx target_function = force_reg (Pmode, XEXP (DECL_RTL (fndecl), 0));
+      target_function = force_reg (Pmode, XEXP (DECL_RTL (fndecl), 0));
       /* lui     t2, hi(chain)
 	 lui     t1, hi(func)
 	 addi    t2, t2, lo(chain)
 	 jr      r1, lo(func)
       */
-      unsigned HOST_WIDE_INT lui_hi_chain_code, lui_hi_func_code;
-      unsigned HOST_WIDE_INT lo_chain_code, lo_func_code;
-
-      rtx uimm_mask = force_reg (SImode, gen_int_mode (-IMM_REACH, SImode));
+      uimm_mask = force_reg (SImode, gen_int_mode (-IMM_REACH, SImode));
 
       /* 0xfff.  */
-      rtx imm12_mask = gen_reg_rtx (SImode);
+      imm12_mask = gen_reg_rtx (SImode);
       emit_insn (gen_one_cmplsi2 (imm12_mask, uimm_mask));
 
-      rtx fixup_value = force_reg (SImode, gen_int_mode (IMM_REACH/2, SImode));
+      fixup_value = force_reg (SImode, gen_int_mode (IMM_REACH/2, SImode));
 
       /* Gen lui t2, hi(chain).  */
-      rtx hi_chain = riscv_force_binary (SImode, PLUS, chain_value,
+      hi_chain = riscv_force_binary (SImode, PLUS, chain_value,
 					 fixup_value);
       hi_chain = riscv_force_binary (SImode, AND, hi_chain,
 				     uimm_mask);
       lui_hi_chain_code = OPCODE_LUI | (STATIC_CHAIN_REGNUM << SHIFT_RD);
-      rtx lui_hi_chain = riscv_force_binary (SImode, IOR, hi_chain,
+      lui_hi_chain = riscv_force_binary (SImode, IOR, hi_chain,
 					     gen_int_mode (lui_hi_chain_code, SImode));
 
       mem = adjust_address (m_tramp, SImode, 0);
       riscv_emit_move (mem, lui_hi_chain);
 
       /* Gen lui t1, hi(func).  */
-      rtx hi_func = riscv_force_binary (SImode, PLUS, target_function,
+      hi_func = riscv_force_binary (SImode, PLUS, target_function,
 					fixup_value);
       hi_func = riscv_force_binary (SImode, AND, hi_func,
 				    uimm_mask);
       lui_hi_func_code = OPCODE_LUI | (RISCV_PROLOGUE_TEMP_REGNUM << SHIFT_RD);
-      rtx lui_hi_func = riscv_force_binary (SImode, IOR, hi_func,
+      lui_hi_func = riscv_force_binary (SImode, IOR, hi_func,
 					    gen_int_mode (lui_hi_func_code, SImode));
 
       mem = adjust_address (m_tramp, SImode, 1 * GET_MODE_SIZE (SImode));
       riscv_emit_move (mem, lui_hi_func);
 
       /* Gen addi t2, t2, lo(chain).  */
-      rtx lo_chain = riscv_force_binary (SImode, AND, chain_value,
+      lo_chain = riscv_force_binary (SImode, AND, chain_value,
 					 imm12_mask);
       lo_chain = riscv_force_binary (SImode, ASHIFT, lo_chain, GEN_INT (20));
 
@@ -3806,20 +3823,20 @@ riscv_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
 		      | (STATIC_CHAIN_REGNUM << SHIFT_RD)
 		      | (STATIC_CHAIN_REGNUM << SHIFT_RS1);
 
-      rtx addi_lo_chain = riscv_force_binary (SImode, IOR, lo_chain,
+      addi_lo_chain = riscv_force_binary (SImode, IOR, lo_chain,
 					      force_reg (SImode, GEN_INT (lo_chain_code)));
 
       mem = adjust_address (m_tramp, SImode, 2 * GET_MODE_SIZE (SImode));
       riscv_emit_move (mem, addi_lo_chain);
 
       /* Gen jr r1, lo(func).  */
-      rtx lo_func = riscv_force_binary (SImode, AND, target_function,
+      lo_func = riscv_force_binary (SImode, AND, target_function,
 					imm12_mask);
       lo_func = riscv_force_binary (SImode, ASHIFT, lo_func, GEN_INT (20));
 
       lo_func_code = OPCODE_JALR | (RISCV_PROLOGUE_TEMP_REGNUM << SHIFT_RS1);
 
-      rtx jr_lo_func = riscv_force_binary (SImode, IOR, lo_func,
+      jr_lo_func = riscv_force_binary (SImode, IOR, lo_func,
 					   force_reg (SImode, GEN_INT (lo_func_code)));
 
       mem = adjust_address (m_tramp, SImode, 3 * GET_MODE_SIZE (SImode));
@@ -4112,20 +4129,20 @@ riscv_handle_option (size_t code, const char *arg, int value ATTRIBUTE_UNUSED)
 #undef TARGET_CANNOT_COPY_INSN_P
 #define TARGET_CANNOT_COPY_INSN_P riscv_cannot_copy_insn_p
 
-// #undef TARGET_ATOMIC_ASSIGN_EXPAND_FENV
-// #define TARGET_ATOMIC_ASSIGN_EXPAND_FENV riscv_atomic_assign_expand_fenv
+/* #undef TARGET_ATOMIC_ASSIGN_EXPAND_FENV */
+/* #define TARGET_ATOMIC_ASSIGN_EXPAND_FENV riscv_atomic_assign_expand_fenv */
 
 #undef TARGET_EXPAND_BUILTIN_VA_START
 #define TARGET_EXPAND_BUILTIN_VA_START riscv_va_start
 
-// #undef TARGET_INIT_BUILTINS
-// #define TARGET_INIT_BUILTINS riscv_init_builtins
+/* #undef TARGET_INIT_BUILTINS */
+/* #define TARGET_INIT_BUILTINS riscv_init_builtins */
 
-// #undef TARGET_BUILTIN_DECL
-// #define TARGET_BUILTIN_DECL riscv_builtin_decl
+/* #undef TARGET_BUILTIN_DECL */
+/* #define TARGET_BUILTIN_DECL riscv_builtin_decl */
 
-// #undef TARGET_EXPAND_BUILTIN
-// #define TARGET_EXPAND_BUILTIN riscv_expand_builtin
+/* #undef TARGET_EXPAND_BUILTIN */
+/* #define TARGET_EXPAND_BUILTIN riscv_expand_builtin */
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 
