@@ -76,9 +76,9 @@ extern unsigned char riscv_class_max_nregs (reg_class_t, enum machine_mode);
 void riscv_cpu_cpp_builtins (struct cpp_reader *);
 
 /* Routines implemented in riscv-builtins.c.  */
-// extern void riscv_atomic_assign_expand_fenv (tree *, tree *, tree *);
-// extern rtx riscv_expand_builtin (tree, rtx, rtx, enum machine_mode, int);
-// extern tree riscv_builtin_decl (unsigned int, bool);
-// extern void riscv_init_builtins (void);
+extern void riscv_atomic_assign_expand_fenv (tree *, tree *, tree *);
+extern rtx riscv_expand_builtin (tree, rtx, rtx, enum machine_mode, int);
+extern tree riscv_builtin_decl (unsigned int, bool);
+extern void riscv_init_builtins (void);
 
 #endif /* ! GCC_RISCV_PROTOS_H */
