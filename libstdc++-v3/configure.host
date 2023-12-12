@@ -110,6 +110,9 @@ case "${host_cpu}" in
   mips*)
     try_cpu=mips
     ;;
+  riscv*)
+    try_cpu=riscv
+    ;;
   powerpc* | rs6000)
     try_cpu=powerpc
     ;;
@@ -303,6 +306,9 @@ case "${host}" in
         ;;
       mips64*)
 	abi_baseline_pair=mips64-linux-gnu
+	;;
+      riscv64*)
+	abi_baseline_pair=riscv64-linux-gnu
 	;;
       powerpc64)
         abi_baseline_pair=powerpc64-linux-gnu
