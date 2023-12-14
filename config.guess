@@ -977,6 +977,9 @@ EOF
     xtensa*:Linux:*:*)
     	echo ${UNAME_MACHINE}-unknown-linux-gnu
 	exit ;;
+    riscv64:Linux:*:*)
+	echo riscv64-unknown-linux-gnu
+	exit ;;
     i*86:DYNIX/ptx:4*:*)
 	# ptx 4.0 does uname -s correctly, with DYNIX/ptx in there.
 	# earlier versions are messed up and put the nodename in both
