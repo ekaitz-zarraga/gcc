@@ -4129,12 +4129,13 @@ riscv_handle_option (size_t code, const char *arg, int value ATTRIBUTE_UNUSED)
 #undef TARGET_CANNOT_COPY_INSN_P
 #define TARGET_CANNOT_COPY_INSN_P riscv_cannot_copy_insn_p
 
-/* #undef TARGET_ATOMIC_ASSIGN_EXPAND_FENV */
-/* #define TARGET_ATOMIC_ASSIGN_EXPAND_FENV riscv_atomic_assign_expand_fenv */
+#undef TARGET_ATOMIC_ASSIGN_EXPAND_FENV
+#define TARGET_ATOMIC_ASSIGN_EXPAND_FENV riscv_atomic_assign_expand_fenv
 
 #undef TARGET_EXPAND_BUILTIN_VA_START
 #define TARGET_EXPAND_BUILTIN_VA_START riscv_va_start
 
+/* TODO I think we don't need this */
 /* #undef TARGET_INIT_BUILTINS */
 /* #define TARGET_INIT_BUILTINS riscv_init_builtins */
 
