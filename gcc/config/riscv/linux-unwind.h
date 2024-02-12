@@ -42,7 +42,7 @@ riscv_fallback_frame_state (struct _Unwind_Context *context,
   struct rt_sigframe
   {
     siginfo_t info;
-    ucontext_t uc;
+    ucontext_t uc; // TODO: Careful here
   };
 
   struct rt_sigframe *rt_;
