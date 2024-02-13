@@ -1,34 +1,13 @@
 (use-modules (ice-9 popen)
              (ice-9 rdelim)
+             (srfi srfi-1)
              (guix packages)
              (guix utils)
              (guix gexp)
              (guix profiles)
              (guix download)
-             (gnu packages gcc)
-             (gnu packages linux)
-             (gnu packages maths)
-             (gnu packages commencement)
-             (gnu packages cross-base)
-             (gnu packages compression)
-             (gnu packages multiprecision)
-             (gnu packages base)
-             (gnu packages flex))
-
-(define-public flex-2.5
-  (package
-    (inherit flex)
-    (version "2.5.39")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append
-                     "https://github.com/westes/flex"
-                     "/releases/download/v" version "/"
-                     "flex-" version ".tar.gz"))
-              (sha256
-                (base32
-                  "0j49664wfmm2bvsdxxcaf1835is8kq0hr0sc20km14wc2mc1ppbi"))))
-    (arguments '(#:tests? #f))))
+             (gnu packages flex)
+             (gnu packages gcc))
 
 (define %source-dir (dirname (current-filename)))
 
@@ -36,11 +15,13 @@
   (read-line
     (open-pipe "git show HEAD | head -1 | cut -d ' ' -f 2 "  OPEN_READ)))
 
-(define (discard-git path stat)
-  (let* ((start (1+ (string-length %source-dir)) )
-         (end   (+ 4 start)))
-  (not (false-if-exception (equal? ".git" (substring path start end))))))
-
+(define (keep-file? file stat)
+  ;; Return #t if FILE in this repository must be kept, #f otherwise. FILE is
+  ;; an absolute file name and STAT is the result of 'lstat' applied to FILE.
+  (not (or (any (lambda (str) (string-contains file str))
+                '(".git" ".log"))
+           (any (lambda (str) (string-suffix? str file))
+                '("guix.scm")))))
 
 (define-public gcc-mine
   (package
@@ -48,45 +29,30 @@
     (version (string-append "4.6.4-HEAD"))
     (source (local-file %source-dir
               #:recursive? #t
-              #:select? discard-git))
+              #:select? keep-file?))
 
-    (inputs `(("flex" ,flex-2.5)
-              ("ppl" ,ppl)
-              ,@(package-inputs gcc-4.7)))
+    (native-inputs `(("flex" ,flex)))
+    (inputs `( ,@(package-inputs gcc-4.7)))
 
     (arguments
-      (substitute-keyword-arguments (package-arguments gcc-4.7)
-         ((#:configure-flags configure-flags)
-          `(let ((out   (assoc-ref %outputs "out"))
-                 (libc  (assoc-ref %build-inputs "libc")))
-
-            (list (string-append "--prefix=" out)
-                  "--disable-nls"
-                  "--disable-coverage"
-                  "--disable-libcilkrts"
-                  "--disable-libgomp"
-                  "--disable-libitm"
-                  "--disable-libmudflap"
-                  "--disable-libquadmath"
-                  "--disable-libsanitizer"
-                  "--disable-libssp"
-                  "--disable-libvtv"
-                  "--disable-lto"
-                  "--disable-lto-plugin"
-                  "--disable-multilib"
-                  "--disable-plugin"
-                  "--disable-threads"
-                  "--disable-libstdcxx-pch"
-                  "--disable-build-with-cxx"
-                  "--with-local-prefix=/no-gcc-local-prefix"
-                  "--with-system-zlib"
-
-                  "--enable-languages=c"
-                  "--disable-bootstrap"
-
-                  "--enable-static"
-                  "--disable-shared"
-
-                  "--enable-threads=single")))))))
+     (substitute-keyword-arguments (package-arguments gcc-4.7)
+       ((#:phases phases)
+        `(modify-phases ,phases
+           (add-after 'unpack 'patch-for-glibc-2.26
+             ;; https://gcc.gnu.org/bugzilla/show_bug.cgi?id=81712
+             ;; TODO: Make this dependant on the glibc version in the build.
+             (lambda _
+               (for-each
+                 (lambda (dir)
+                   (substitute* (string-append "gcc/config/"
+                                               dir "/linux-unwind.h")
+                     (("struct ucontext") "ucontext_t")))
+                 '("alpha" "bfin" "i386" "pa" "sh" "xtensa" "riscv"))))
+           (add-after 'unpack 'setenv
+             ;; This phase is modeled after the one in commencement for gcc-mesboot1.
+             ;; We don't want gcc-11:lib in CPLUS_INCLUDE_PATH, it messes with
+             ;; libstdc++ from gcc-4.6.
+             (lambda _
+               (setenv "CPLUS_INCLUDE_PATH" (getenv "C_INCLUDE_PATH"))))))))))
 
 gcc-mine
