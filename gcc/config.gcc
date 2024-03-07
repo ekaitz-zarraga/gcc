@@ -404,6 +404,14 @@ powerpc*-*-*)
 	;;
 riscv*)
 	cpu_type=riscv
+	need_64bit_hwint=yes
+	case x$with_cpu in
+        riscv64)
+		cpu_is_64bit=yes
+        ;;
+    esac
+    tmake_file="${tmake_file} riscv/t-riscv"
+    extra_options="${extra_options} riscv/riscv.opt"
 	;;
 rs6000*-*-*)
 	need_64bit_hwint=yes
@@ -2063,10 +2071,10 @@ riscv*-*-linux*)
 	esac
     case ${target} in
         riscv64-*-linux*)
-        tmake_file="${tmake_file} riscv/t-riscv riscv/t-linux riscv/t-softfp64 soft-fp/t-softfp"
+        tmake_file="${tmake_file} riscv/t-linux riscv/t-softfp64 soft-fp/t-softfp"
         ;;
         riscv32-*-linux*)
-        tmake_file="${tmake_file} riscv/t-riscv riscv/t-linux riscv/t-softfp32 soft-fp/t-softfp"
+        tmake_file="${tmake_file} riscv/t-linux riscv/t-softfp32 soft-fp/t-softfp"
         ;;
     esac
 
@@ -2085,10 +2093,10 @@ riscv*-*-elf*)
 	esac
     case ${target} in
         riscv64-*-elf*)
-        tmake_file="${tmake_file} riscv/t-riscv riscv/t-softfp64 soft-fp/t-softfp"
+        tmake_file="${tmake_file} riscv/t-elf riscv/t-elf64 riscv/t-softfp64 soft-fp/t-softfp"
         ;;
         riscv32-*-elf*)
-        tmake_file="${tmake_file} riscv/t-riscv riscv/t-softfp32 soft-fp/t-softfp"
+        tmake_file="${tmake_file} riscv/t-elf riscv/t-elf32 riscv/t-softfp32 soft-fp/t-softfp"
         ;;
     esac
 	gnu_ld=yes
