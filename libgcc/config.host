@@ -500,10 +500,10 @@ powerpcle-*-eabisim*)
 	;;
 powerpcle-*-eabi*)
 	;;
-riscv*-*-linux*)
+riscv*-*-elf)
 	tmake_file="${tmake_file} riscv/t-softfp${host_address} t-softfp"
 	;;
-riscv*-*-*)
+riscv*-*-linux*)
 	tmake_file="${tmake_file} riscv/t-softfp${host_address} t-softfp"
 	;;
 rs6000-ibm-aix4.[3456789]* | powerpc-ibm-aix4.[3456789]*)
