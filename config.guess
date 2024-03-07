@@ -956,6 +956,9 @@ EOF
     ppc:Linux:*:*)
 	echo powerpc-unknown-linux-gnu
 	exit ;;
+    riscv32:Linux:*:* | riscv64:Linux:*:*)
+	echo ${UNAME_MACHINE}-unknown-linux
+	exit ;;
     s390:Linux:*:* | s390x:Linux:*:*)
 	echo ${UNAME_MACHINE}-ibm-linux
 	exit ;;
@@ -976,9 +979,6 @@ EOF
 	exit ;;
     xtensa*:Linux:*:*)
     	echo ${UNAME_MACHINE}-unknown-linux-gnu
-	exit ;;
-    riscv64:Linux:*:*)
-	echo riscv64-unknown-linux-gnu
 	exit ;;
     i*86:DYNIX/ptx:4*:*)
 	# ptx 4.0 does uname -s correctly, with DYNIX/ptx in there.
