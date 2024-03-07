@@ -2899,32 +2899,6 @@ x3:	.space 8
 	tls_first_minor=14
 	tls_as_opt="-a64 --fatal-warnings"
 	;;
-  powerpc*-*-*)
-    conftest_s='
-	.section ".tdata","awT",@progbits
-	.align 2
-ld0:	.space 4
-ld1:	.space 4
-x1:	.space 4
-x2:	.space 4
-x3:	.space 4
-	.text
-	addi 3,31,ld0@got@tlsgd
-	bl __tls_get_addr
-	addi 3,31,x1@got@tlsld
-	bl __tls_get_addr
-	addi 9,3,x1@dtprel
-	addis 9,3,x2@dtprel@ha
-	addi 9,9,x2@dtprel@l
-	lwz 9,x3@got@tprel(31)
-	add 9,9,x@tls
-	addi 9,2,x1@tprel
-	addis 9,2,x2@tprel@ha
-	addi 9,9,x2@tprel@l'
-	tls_first_major=2
-	tls_first_minor=14
-	tls_as_opt="-a32 --fatal-warnings"
-	;;
   riscv*-*-*)
     conftest_s='
 	.section .tdata,"awT",@progbits
@@ -3899,9 +3873,8 @@ esac
 # ??? Once 2.11 is released, probably need to add first known working
 # version to the per-target configury.
 case "$cpu_type" in
-  aarch64 | alpha | arm | avr | bfin | cris | i386 | m32c | m68k | microblaze \
-  | mips | nios2 | pa | riscv | rs6000 | score | sparc | spu | tilegx \
-  | tilepro | visium | xstormy16 | xtensa)
+  alpha | arm | avr | bfin | cris | i386 | m32c | m68k | microblaze | mips \
+  | pa | riscv | rs6000 | score | sparc | spu | xstormy16 | xtensa)
     insn="nop"
     ;;
   ia64 | s390)
