@@ -49,6 +49,10 @@
                                                dir "/linux-unwind.h")
                      (("struct ucontext") "ucontext_t")))
                  '("alpha" "bfin" "i386" "pa" "sh" "xtensa" "riscv"))))
+           (add-after 'unpack 'dont-build-stage2-with-debug
+             (lambda _
+               (substitute* "config/bootstrap-debug.mk"
+                 (("STAGE2_CFLAGS.*") ""))))
            (add-after 'unpack 'ignore-bad-compare
              ;; From Makefile.in:57786:
              ;; Since the 'compare' process will fail (on debugging information) if any
